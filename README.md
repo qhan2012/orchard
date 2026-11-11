@@ -30,7 +30,19 @@ orchardctl herdr --cluster hpc1 --job <id> start rev --kind claude --cwd '~/proj
 orchardctl herdr --cluster hpc1 --job <id> prompt rev "Run the tests and report." --timeout-ms 600000
 orchardctl herdr --cluster hpc1 --job <id> read rev --lines 200
 orchardctl slurm hpc1 cancel <id>
+
+orchardctl session adopt --node box1 --note "my manual run"   # a herdr session you started yourself
+orchardctl session list
 ```
+
+## Session registry
+
+`state/sessions.json` records each herdr session the master knows, with `started_by`:
+
+- `orchard`: `slurm launch-herdr` and `herdr up` record these. orchard can stop them.
+- `user`: you started it. Register it with `session adopt`. The master can watch it and send prompts, but `herdr down` refuses to stop it without `--force`.
+
+`herdr down` also refuses a session that is not in the registry. `slurm cancel` marks the sessions of that job as ended. `session forget <id>` deletes a stale record and changes nothing on the target. The registry is a local record, not live state: check the target (`slurm status`, `herdr status`) for ground truth.
 
 Every command prints JSON on stdout. On an error, it prints `{"error", "message"}` on stderr and exits with code 1. See `runbooks/` for the standard procedures.
 
@@ -42,6 +54,7 @@ Every command prints JSON on stdout. On an error, it prints `{"error", "message"
 │   ├── transport.py   # SSHTransport (system OpenSSH), SrunTransport (into a running job via head)
 │   ├── inventory.py   # load + check inventory.yaml
 │   ├── slurm.py       # SlurmAdapter: submit / queue / job / cancel / wait_running; ownership tag
+│   ├── registry.py    # session registry: which herdr sessions exist and who started each
 │   ├── herdr.py       # HerdrClient: server up/down/status, agents, start, prompt, wait, read, keys
 │   └── cli.py         # orchardctl entry point (JSON out)
 ├── tests/             # offline tests with a fake transport
@@ -49,7 +62,7 @@ Every command prints JSON on stdout. On an error, it prints `{"error", "message"
 ├── inventory.example.yaml
 ├── reports/           # YYYY-MM-DD_worklog.md + _summary.md
 ├── memory/ + MEMORY.md
-├── state/             # runtime state (gitignored)
+├── state/             # runtime state (gitignored); sessions.json is the session registry
 └── CLAUDE.md          # canonical agent instructions (AGENTS.md, .cursorrules point here)
 ```
 

@@ -14,6 +14,7 @@ You are the **master agent**. You control remote nodes, Slurm, and herdr only th
 1. **Think like an architect.** Go deep to ground truth. Deliver customer-ready work. Anticipate hard questions before they are asked.
 2. **Check ownership before you change shared resources.** Shared resources are Slurm jobs, processes, herdr sessions, GPUs, ports, files, and nodes.
    - Cancel only jobs that carry the `orchard:` tag and appear in `squeue --me`.
+   - Stop only herdr servers that `orchardctl session list` shows with `started_by: orchard`. Sessions with `started_by: user` belong to a person: watch and prompt only.
    - Use `--force`, `scancel`, `kill`, or `herdr server stop` on anything orchard did not start only after a person confirms it.
    - Ask before you loosen tolerances or touch root files or dependencies.
 3. **Smoke test where needed.** Before long runs or major changes, run `runbooks/smoke-test.md`.

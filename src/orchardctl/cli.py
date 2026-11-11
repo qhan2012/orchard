@@ -9,13 +9,16 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import uuid
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from . import inventory as inv_mod
 from .herdr import HerdrClient
+from .registry import ORCHARD, USER, Registry, target_id
 from .slurm import SlurmAdapter, check_job_id, herdr_job_script
 from .transport import SrunTransport
 
@@ -48,18 +51,34 @@ def _opts(pairs: list[str] | None) -> dict[str, str]:
     return out
 
 
-def _herdr(inv: inv_mod.Inventory, a: argparse.Namespace) -> HerdrClient:
+def _target(inv: inv_mod.Inventory, a: argparse.Namespace) -> dict[str, Any]:
+    """Check a --node / --cluster --job target against the inventory."""
+    session = a.session or inv.herdr_session
     if a.node:
-        t = inv.node(a.node).transport()
-    elif a.cluster and a.job:
-        t = SrunTransport(inv.cluster(a.cluster).transport(), check_job_id(a.job))
+        inv.node(a.node)
+        return {"session": session, "node": a.node}
+    if a.cluster and a.job:
+        inv.cluster(a.cluster)
+        return {"session": session, "cluster": a.cluster, "job_id": check_job_id(a.job)}
+    raise SystemExit("target: give --node NAME, or --cluster NAME --job ID")
+
+
+def _herdr(inv: inv_mod.Inventory, tgt: dict[str, Any]) -> HerdrClient:
+    if tgt.get("node"):
+        t = inv.node(tgt["node"]).transport()
     else:
-        raise SystemExit("herdr target: give --node NAME, or --cluster NAME --job ID")
-    return HerdrClient(t, session=a.session or inv.herdr_session, binary=inv.herdr_binary)
+        t = SrunTransport(inv.cluster(tgt["cluster"]).transport(), tgt["job_id"])
+    return HerdrClient(t, session=tgt["session"], binary=inv.herdr_binary)
+
+
+def _state_dir(a: argparse.Namespace, inv: inv_mod.Inventory) -> Path:
+    explicit = a.state_dir or os.environ.get("ORCHARD_STATE_DIR")
+    return Path(explicit).expanduser() if explicit else inv.path.parent / "state"
 
 
 def run(a: argparse.Namespace) -> Any:
     inv = inv_mod.load(inv_mod.resolve_path(a.inventory))
+    reg = Registry(_state_dir(a, inv))
 
     if a.cmd == "inventory":
         return {
@@ -68,6 +87,15 @@ def run(a: argparse.Namespace) -> Any:
             "nodes": {k: v.__dict__ for k, v in inv.nodes.items()},
             "herdr": {"session": inv.herdr_session, "binary": inv.herdr_binary},
         }
+
+    if a.cmd == "session":
+        if a.action == "list":
+            return {"path": str(reg.path),
+                    "sessions": [asdict(e) for e in reg.list(include_ended=a.all)]}
+        if a.action == "adopt":
+            return asdict(reg.record(USER, note=a.note or "", **_target(inv, a)))
+        if a.action == "forget":
+            return {"forgotten": asdict(reg.forget(a.id))}
 
     if a.cmd == "node":
         r = inv.node(a.name).transport().run(NODE_PROBE, timeout=a.timeout)
@@ -82,7 +110,8 @@ def run(a: argparse.Namespace) -> Any:
             j = s.job(a.job)
             return j.to_dict() if j else {"job_id": a.job, "state": "NOT_FOUND"}
         if a.action == "cancel":
-            return {"cancelled": s.cancel(a.job, force=a.force).to_dict()}
+            job = s.cancel(a.job, force=a.force)
+            return {"cancelled": job.to_dict(), "sessions_ended": reg.end_job(c.name, job.job_id)}
         if a.action == "submit":
             tag = a.tag or uuid.uuid4().hex[:8]
             job_id = s.submit(Path(a.script).read_text(), tag, **_opts(a.opt))
@@ -92,22 +121,35 @@ def run(a: argparse.Namespace) -> Any:
             tag = a.tag or f"herdr-{uuid.uuid4().hex[:8]}"
             opts = {"job-name": f"orchard-{session}", **_opts(a.opt)}
             job_id = s.submit(herdr_job_script(session, inv.herdr_binary), tag, **opts)
-            out: dict[str, Any] = {"job_id": job_id, "tag": tag, "session": session}
+            entry = reg.record(ORCHARD, session, cluster=c.name, job_id=job_id, tag=tag)
+            out: dict[str, Any] = {"job_id": job_id, "tag": tag, "session": session,
+                                   "registry_id": entry.id}
             if a.wait:
                 out["job"] = s.wait_running(job_id, timeout=a.wait).to_dict()
             return out
 
     if a.cmd == "herdr":
-        h = _herdr(inv, a)
+        tgt = _target(inv, a)
+        tid = target_id(**tgt)
+        h = _herdr(inv, tgt)
         act = a.action
         if act == "version":
             return {"version": h.version()}
         if act == "status":
             return h.server_status()
         if act == "up":
-            return {"log": h.start_server()}
+            if not tgt.get("node"):
+                raise SystemExit("herdr up is for plain nodes; on Slurm use `slurm <c> launch-herdr`")
+            reg.check_can_record(tid, ORCHARD)  # refuse before any remote command
+            log = h.start_server()
+            return {"log": log, "registry_id": reg.record(ORCHARD, **tgt).id}
         if act == "down":
-            return h.stop_server()
+            # Stopping a server ends every agent in it: orchard-started only.
+            if not a.force:
+                reg.require_orchard(tid)
+            out = h.stop_server()
+            reg.end(tid)
+            return {"stopped": tid, "result": out}
         if act == "agents":
             return h.agents()
         if act == "get":
@@ -129,10 +171,21 @@ def run(a: argparse.Namespace) -> Any:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="orchardctl", description=__doc__)
     p.add_argument("--inventory", help="inventory file (default $ORCHARD_INVENTORY or ./inventory.yaml)")
+    p.add_argument("--state-dir", help="registry dir (default $ORCHARD_STATE_DIR or <inventory dir>/state)")
     p.add_argument("-v", "--verbose", action="store_true", help="log every remote command to stderr")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("inventory", help="show the parsed inventory")
+
+    se = sub.add_parser("session", help="registry of herdr sessions and who started each")
+    ses = se.add_subparsers(dest="action", required=True)
+    sl = ses.add_parser("list"); sl.add_argument("--all", action="store_true", help="include ended sessions")
+    ad = ses.add_parser("adopt", help="register a herdr session that a person started")
+    ad.add_argument("--node"); ad.add_argument("--cluster"); ad.add_argument("--job")
+    ad.add_argument("--session", help="herdr session (default from inventory)")
+    ad.add_argument("--note")
+    fo = ses.add_parser("forget", help="delete a registry record (touches nothing remote)")
+    fo.add_argument("id")
 
     n = sub.add_parser("node", help="probe an SSH node (load, mem, GPU, herdr)")
     n.add_argument("name")
@@ -158,8 +211,10 @@ def build_parser() -> argparse.ArgumentParser:
     h.add_argument("--node"); h.add_argument("--cluster"); h.add_argument("--job")
     h.add_argument("--session", help="herdr session (default from inventory)")
     hs = h.add_subparsers(dest="action", required=True)
-    for name in ("version", "status", "up", "down", "agents"):
+    for name in ("version", "status", "up", "agents"):
         hs.add_parser(name)
+    dn = hs.add_parser("down", help="stop a herdr server that orchard started")
+    dn.add_argument("--force", action="store_true", help="also stop a server orchard did not start")
     g = hs.add_parser("get"); g.add_argument("target")
     r = hs.add_parser("read"); r.add_argument("target")
     r.add_argument("--lines", type=int, default=120)

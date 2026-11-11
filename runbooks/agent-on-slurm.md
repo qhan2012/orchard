@@ -21,4 +21,11 @@
 
 ## Plain SSH node (no scheduler)
 
-Run `orchardctl herdr --node <n> up` to start a detached server (the log goes to `~/.orchard/`). Then do the same steps as above with `--node <n>`. When you finish, run `herdr --node <n> down`. Use `down` only on a server orchard started.
+Run `orchardctl herdr --node <n> up` to start a detached server (the log goes to `~/.orchard/`). Then do the same steps as above with `--node <n>`. When you finish, run `herdr --node <n> down`. `down` works only on a server that orchard started.
+
+## A herdr session that a person started
+
+1. The person starts herdr on the target with the session name from the inventory (`herdr --session <s>`), or tells you the name they used.
+2. Register it: `orchardctl session adopt --node <n>` or `--cluster <c> --job <id>`. Add `--session <name>` if the name differs, and `--note` to say what it is.
+3. Watch and prompt as usual (`agents`, `read`, `prompt`). Only one side drives an agent at a time: confirm with the person before you send a prompt.
+4. Do not stop the server and do not cancel the job. The person does that.
