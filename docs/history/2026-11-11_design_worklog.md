@@ -171,3 +171,8 @@
 - Change: locally, the session is the master's own (`$HERDR_SESSION`, or `default` when `HERDR_ENV=1` and it is empty; `--session default` selects it, v0.8.2 `src/session.rs`). The master does not start a local server when it is inside herdr. On a target the session stays `orchard`. The task file records the session, so `/check` and `/close` did not change.
 - Safety: the local session also holds the person's own panes and agents. The master touches only agents with a task file. `/close` never closes a herdr workspace without a task file.
 - `docs/first-run.md` step 4 tested the guard with `herdr session stop default`. A "yes" would have stopped the person's own session. It now uses a name that does not exist.
+
+## 24. Worker model (2026-11-12)
+- DECISION (user): `claude` workers start with Opus 5.5.
+- Change: the default `agent_args` for `claude` are `--dangerously-skip-permissions --model claude-opus-5-5`. An `agent_args` entry in `targets.yaml` replaces the whole default. The person can name another model for one task. The master's own model is the person's choice at launch.
+- Not verified: that the Claude Code version on each target accepts the model name `claude-opus-5-5`. `docs/first-run.md` step 9 checks it.

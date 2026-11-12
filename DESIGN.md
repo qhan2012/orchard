@@ -239,7 +239,10 @@ What changes with the kind:
   kinds. This is the person's decision (2026-11-12): nobody is there to
   answer a prompt, and a worker that stops at each command cannot do a long
   task. For `claude` the default `agent_args` are
-  `--dangerously-skip-permissions`; herdr passes them after `--`. An entry
+  `--dangerously-skip-permissions --model claude-opus-5-5`; herdr passes
+  them after `--`. The model is Opus 5.5 for every `claude` worker (the
+  person's decision, 2026-11-12); the person can name another model for
+  one task. An entry
   in `targets.yaml` replaces the default. Other kinds have no default: the
   person sets their flag, and without one the worker can stop at approval
   prompts (`blocked`).
