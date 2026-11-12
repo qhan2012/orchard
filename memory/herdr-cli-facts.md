@@ -13,6 +13,8 @@ Source for every line below: github.com/ogulcancelik/herdr tag `v0.8.2`, `docs/v
 - `agent prompt <target> <text> [--wait] [--until STATUS] [--timeout MS]`. If the agent is `blocked`, it returns `agent_blocked` and sends nothing. With `--wait`, no activity in 5 s gives `agent_prompt_stalled`. (verified 2026-11-11, v0.8.2 docs)
 - `agent list` prints `.result.agents[]` with `name`, `agent` (kind), `agent_status`, `pane_id`, `cwd`, `state_change_seq`. (verified 2026-11-11, v0.8.2 `src/api/schema/agents.rs`)
 - `agent_status` is one of `idle`, `working`, `blocked`, `done`, `unknown`. `idle` and `done` mean ready. `blocked` means an approval or question UI is open. `unknown` does not prove the work completed. (verified 2026-11-11, v0.8.2 `src/api/schema/common.rs` and docs)
+- `agent rename <target> <name>|--clear` names an already detected agent. A name is cleared when the agent exits. (verified 2026-11-11, v0.8.2 docs)
+- `session list [--json]` lists sessions. `--session default` selects the default session explicitly (`src/session.rs` `normalize_name`). (verified 2026-11-11, v0.8.2 source)
 - `agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N]`. Without `--lines`, recent sources read 80 rows. (verified 2026-11-11, v0.8.2 docs)
 - A timeout or server error prints JSON on stderr and exits 1. Usage errors exit 2. A timeout does not prove that a prompt was not delivered. (verified 2026-11-11, v0.8.2 docs)
 - Do not run bare `herdr`: it opens the TUI. (verified 2026-11-11, v0.8.2 docs)

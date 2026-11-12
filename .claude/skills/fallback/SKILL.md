@@ -6,7 +6,7 @@ argument-hint: "<task>"
 
 # Move a task to the local runner
 
-Do this when `kills` reaches 2, or when the person says so.
+Do this when `kills` reaches 2, or when the person says so. For a task with `started_by: person`, do it only when the person says so. The new local agent runs in session `orchard`: set `session: orchard`, `agent_name: <task>`, and `started_by: orchard` in the task file.
 
 1. **Make the local harness.** Do `/publish` step 3 locally, with the `harness:` sha from the task file (not `HARNESS`, which can be newer). If `~/myworks/<task>` exists locally, stop and tell the person.
 2. **Bring the state back.** Copy from the remote workspace to the local one: `README.md`, `MEMORY.md`, `memory/`, `reports/`. Example: `E 'tar -C ~/myworks/<task> -cf - README.md MEMORY.md memory reports' | tar -C ~/myworks/<task> -xf -`. Leave `codebases/` and `experiments/` on the remote.

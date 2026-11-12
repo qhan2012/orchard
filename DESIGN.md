@@ -181,6 +181,32 @@ master moves the task to `runner: local`: it makes the local harness, adds the
 local agent that continues. It also sets the machine's default `runner` to
 `local` in `targets.yaml` and records the reason in memory.
 
+## 6a. Master inside herdr
+
+The master can run in a pane of the local herdr session `orchard`, as the
+agent named `master`. Then local workers (`runner: local`) are in the same
+session: one TUI shows all of them, and herdr marks any pane that is done or
+blocked, including the master. Remote workers stay in the herdr server on
+their machine; the master reaches them through `enter`. (`herdr --remote
+<host>` attaches the TUI to one remote server at a time.)
+
+Two rules follow: `/check` skips the agent `master`, and the master never
+stops the `orchard` server, because it runs in it.
+
+## 6b. Adopt a running agent
+
+The person can start a long-run agent by hand and then give it to the
+master. `/adopt` finds the agent (machine, herdr session, name or pane),
+names it if it has no name, and writes a task file with
+`started_by: person`. The task file also stores the agent's `session` and
+`agent_name`, because a hand-started agent is often in the default session.
+
+An adopted agent stays the person's. The master checks it and reads it, but
+prompts, restarts, stops, or moves it only when the person asks. Its
+directory may not be a harness workspace. Then a check uses the herdr state
+and the screen only, and only the person says the task is done. The master
+adds no harness files to that directory unless the person asks.
+
 ## 7. Repo layout
 
 ```
@@ -191,7 +217,7 @@ orchard/
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
-├── .claude/skills/       # publish, check, fallback
+├── .claude/skills/       # publish, check, fallback, adopt
 ├── memory/ + MEMORY.md
 └── reports/
 ```

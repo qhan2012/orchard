@@ -11,12 +11,20 @@ cp targets.example.yaml targets.yaml     # edit; keep ProxyJump etc. in ~/.ssh/c
 ssh -o BatchMode=yes <host> true         # the master never answers a password prompt
 ```
 
-Then start Claude Code in this directory and tell it what to do, for example:
+Start the master inside herdr, so the master and local workers share one session and herdr tells you when any of them needs you:
+
+```bash
+herdr --session orchard                  # opens the TUI; in its first pane:
+cd <orchard checkout> && claude          # the master names itself `master` at start
+```
+
+Then tell the master what to do, for example:
 
 - "Plan a task on `box1`: find why the MoE run gives NaN." → `/publish`
 - "Check all tasks." → `/check`
 - "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
 - "Run this task locally instead." → `/fallback`
+- "Take over the long run I started on `box1` in pane w2:p1." → `/adopt`
 
 ## Layout
 
@@ -27,7 +35,7 @@ Then start Claude Code in this directory and tell it what to do, for example:
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
-├── .claude/skills/       # publish, check, fallback (the procedures)
+├── .claude/skills/       # publish, check, fallback, adopt (the procedures)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine; entries end with (verified date, source)
 └── reports/              # YYYY-MM-DD_worklog.md + _summary.md
 ```

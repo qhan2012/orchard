@@ -27,7 +27,7 @@ argument-hint: "<task>"
 4. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local`, add the `### Remote` block (`DESIGN.md` 4).
    To write a remote file: `E 'cat > ~/myworks/<task>/README.md' < local-copy`.
 5. **Seed memory.** If `memory/target-<target>.md` exists here, copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`.
-6. **Start the agent in herdr** (see memory `herdr-cli-facts`).
+6. **Start the agent in herdr** (see memory `herdr-cli-facts`). Use session `orchard`. Set `session: orchard` and `agent_name: <task>` in the task file.
    ```bash
    herdr --session orchard status server      # if no server: setsid nohup herdr --session orchard server > ~/.orchard-herdr.log 2>&1 < /dev/null &
    herdr --session orchard workspace create --cwd ~/myworks/<task> --no-focus --label <task>   # read .result.root_pane.pane_id
@@ -35,4 +35,5 @@ argument-hint: "<task>"
    herdr --session orchard agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."
    ```
    Never run bare `herdr`: it opens the TUI.
+   For `runner: local`, the master usually runs inside the local `orchard` session, so the server is already running: skip the start. The worker gets its own workspace (`--no-focus`), so the master pane does not change.
 7. **Record.** Set `status: running` in the task file. Add a worklog entry with the task, target, runner, workspace, and harness commit.
