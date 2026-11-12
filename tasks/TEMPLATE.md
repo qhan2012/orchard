@@ -6,10 +6,11 @@ agent: claude        # agent kind
 started_by: orchard  # orchard | person (adopted with /adopt)
 session: orchard     # herdr session; `default` is the default session
 agent_name:          # herdr agent target; default: the task name
-workspace:           # <target>:~/myworks/<task>  or  local:~/myworks/<task>
+agent_session:       # native agent session id, written by /close if herdr reports one
+workspace:           # <target>:<absolute path>  or  local:<absolute path>; the path ends in myworks/<task>
 remote_dir:          # runner: local only
 harness:             # full harness commit sha used (from HARNESS at publish time)
-status: planned      # planned | running | blocked | idle | killed | done
+status: planned      # planned | running | blocked | idle | killed | done | closed
 kills: 0
 check:               # set at runtime, for example "every 10m"; empty = only when asked
 last_checked:

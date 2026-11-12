@@ -1,6 +1,9 @@
 # Copy to targets.yaml (gitignored) and edit. See DESIGN.md section 2.
 # Put ProxyJump, User, IdentityFile in ~/.ssh/config, not here.
 # Test first: ssh -o BatchMode=yes <host> true
+# workdir: where task workspaces go, <workdir>/<task>. Default ~/myworks. Must end in myworks.
+#          /publish reviews it with you and writes it here on first use.
+# datadir: optional, for large outputs when the only big disk is purged.
 
 box1:                       # type A: direct node
   enter: "ssh box1"
@@ -15,3 +18,5 @@ corp:                       # type B2: jumper for scheduler commands only, in-ho
   enter: "ssh corp-jumper"
   job_exec: "myrun --job {job} --"
   runner: local
+  workdir: /proj/<user>/myworks       # not purged, seen on compute nodes
+  datadir: /scratch/<user>/myworks    # purged after N days: large outputs only

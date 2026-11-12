@@ -23,6 +23,7 @@ Then tell the master what to do, for example:
 - "Plan a task on `box1`: find why the MoE run gives NaN." → `/publish`
 - "Check all tasks." → `/check`
 - "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
+- "Close `moe-nan-debug`." → `/close`
 - "Run this task locally instead." → `/fallback`
 - "Take over the long run I started on `box1` in pane w2:p1." → `/adopt`
 
@@ -35,7 +36,7 @@ Then tell the master what to do, for example:
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
-├── .claude/skills/       # publish, check, fallback, adopt (the procedures)
+├── .claude/skills/       # publish, check, close, fallback, adopt (the procedures)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine; entries end with (verified date, source)
 └── reports/              # YYYY-MM-DD_worklog.md + _summary.md
 ```
@@ -45,7 +46,7 @@ Then tell the master what to do, for example:
 **Goal.** From one local machine, a master agent plans, publishes, and monitors agent tasks on remote machines, and moves a task to a local agent when the remote kills agents.
 
 **Success criteria.**
-1. Publish: a task gets a workspace at `~/myworks/<task>/` made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
+1. Publish: after the person reviews the directory and its disk use, a task gets a workspace at `<workdir>/<task>/` (default `~/myworks/<task>/`) made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
 2. Monitor: a check gives the right status (`running`, `done`, `blocked`, `idle`, `killed`) from herdr and the workspace files.
 3. Fallback: after two kills, the task continues with a local agent from the last worklog entry.
 4. The master never stops or changes something it did not start, unless a person confirms it.

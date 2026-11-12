@@ -32,6 +32,10 @@ corp: {enter: "ssh jumper", job_exec: "myrun --job {job} --", runner: local}
   scheduler has its own.
 - `runner`: `herdr` (agent on the machine) or `local` (agent on the local
   machine, works through `enter`).
+- `workdir` (optional): where workspaces go, `<workdir>/<task>`. Default
+  `~/myworks`. It always ends in `myworks`.
+- `datadir` (optional): a place for large outputs, when the only big disk is
+  purged.
 
 Machine types seen so far:
 
@@ -57,7 +61,7 @@ agent: claude
 workspace: local:~/myworks/moe-nan-debug   # where the harness is
 remote_dir: ~/myworks/moe-nan-debug        # runner: local only
 harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
-status: running        # planned | running | blocked | idle | killed | done
+status: running        # planned | running | blocked | idle | killed | done | closed
 kills: 0
 check: every 10m       # set at runtime; empty = only when asked
 last_checked: 2026-11-11T21:40
@@ -71,7 +75,27 @@ everything is.
 
 ## 4. Publish
 
-### 4a. Make the workspace
+### 4a. Choose and review the directory
+
+Where workspaces go is a property of the machine: `workdir` in
+`targets.yaml`, chosen once with the person on first use. Order of
+preference: (1) a disk that is not purged and that compute nodes can see;
+(2) home, if the quota is enough; (3) if only a purged disk has space, the
+workspace stays in home and that disk becomes `datadir` for large outputs.
+The worklog and memory are the recovery state of a task, so they do not go
+on a purged disk. Home must always keep free space: agents and herdr write
+their state there.
+
+**For every new workspace, the person reviews before the master makes it**:
+the directory, the disk use of home and `workdir`, and the alternative
+disks. Commands cannot show everything (`df` on a shared filesystem shows
+the whole filesystem, not the user's quota; purge policy; file-count quota;
+what compute nodes see), so the master asks once and records the answers in
+`memory/target-<name>.md`.
+
+### 4b. Make the workspace
+
+In the commands below, `~/myworks` stands for `<workdir>`.
 
 The workspace is a copy of `qhan2012/harness` at `~/myworks/<task>/`, on the
 side where the agent runs. The harness version is pinned in the `HARNESS`
@@ -96,13 +120,13 @@ vendored copy (a second copy that drifts, and must be sent to the remote).
 
 Code repos for the task go in `codebases/`, as the harness says.
 
-### 4b. Write the plan
+### 4c. Write the plan
 
 The master fills `README.md § Project Scope` in the workspace: goal, success
 criteria, verifier, scope boundary, constraints. The harness `CLAUDE.md`
 already tells the agent to read this section first.
 
-### 4c. Start the agent
+### 4d. Start the agent
 
 The prompt is short, because the plan is in the file:
 
@@ -157,7 +181,7 @@ adds the `enter` prefix.
 | Status | Condition | Master does |
 |---|---|---|
 | `running` | agent is there and working | nothing |
-| `done` | summary exists | read it, report, collect memory (section 8) |
+| `done` | summary exists | read it, report. The agent stays, for follow-up questions |
 | `blocked` | herdr says blocked, or worklog has `BLOCKER:` | read the screen or worklog, report. Never approve for the person |
 | `killed` | agent is gone or herdr is unreachable, and no summary | restart, `kills += 1` |
 | `idle` | agent is there but stopped, no summary | read the screen, decide what it waits for |
@@ -172,6 +196,21 @@ now", "check this task every 10 minutes until done"). A cadence runs as
 session ends, so the master also records the cadence in the task file
 (`check:`) and, after a restart, tells the person which loops to start again.
 With no cadence, it checks only when asked.
+
+## 5a. Close
+
+`done` and `closed` are different. At `done` the master only reports. The
+person closes a task when they have no more questions. Then the master:
+records the agent's native session id if herdr reports one (so the
+conversation can be resumed), checks that no scheduler job named
+`<task>-*` is left, copies `reports/` and memory back to the local machine,
+collects memory (section 8), and closes the worker's herdr workspace. The
+workspace directory stays.
+
+The master does not stop herdr servers. A server belongs to a machine, not
+to a task, and an idle server costs almost nothing. It stops one only when
+the person asks, after it shows what still runs there. An adopted agent is
+never closed this way.
 
 ## 6. Fallback
 
@@ -217,7 +256,7 @@ orchard/
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
-├── .claude/skills/       # publish, check, fallback, adopt
+├── .claude/skills/       # publish, check, close, fallback, adopt
 ├── memory/ + MEMORY.md
 └── reports/
 ```
@@ -236,7 +275,7 @@ Base: the harness memory (`memory/<name>.md` with frontmatter, index in
    - *Down, at publish*: copy `memory/target-<name>.md` into the new
      workspace `memory/` and add its index line, so the worker knows the
      machine from the start.
-   - *Up, at done*: read the task `MEMORY.md`. Move only lessons that hold
+   - *Up, at close*: read the task `MEMORY.md`. Move only lessons that hold
      across tasks into master memory (mostly into `target-<name>.md`).
 
 ## 9. Not in scope
