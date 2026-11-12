@@ -1,5 +1,5 @@
 ---
-task:                # short, unique, kebab-case; also the workspace directory name
+task:                # unique; matches [a-z][a-z0-9_-]{0,31}; also the workspace directory and herdr agent name
 kind: experiment     # experiment (works on one target) | research (local, reads targets, web search)
 target:              # a name from targets.yaml (not `local`); `local` for a research task or an adopted agent on this machine
 runner:              # herdr | local (default: the target's runner)
