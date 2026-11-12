@@ -1,6 +1,8 @@
 # Copy to targets.yaml (gitignored) and edit. See DESIGN.md section 2.
 # Put ProxyJump, User, IdentityFile in ~/.ssh/config, not here.
 # Test first: ssh -o BatchMode=yes <host> true
+# enter:   the command prefix that runs a command on the machine. Keep `-o BatchMode=yes` in it,
+#          so that ssh fails at once and never waits for a password.
 # workdir: where task workspaces go, <workdir>/<task>. Default ~/myworks. Must end in myworks.
 #          /publish reviews it with you and writes it here on first use.
 # datadir: optional, for large outputs when the only big disk is purged.
@@ -16,17 +18,17 @@ local:                      # this machine: research tasks and runner: local age
   #   codex: [...]                                 # no default: you choose
 
 box1:                       # type A: direct node
-  enter: "ssh box1"
+  enter: "ssh -o BatchMode=yes box1"
   runner: herdr
 
 hpc1:                       # type B1: jumper that can run agents, Slurm
-  enter: "ssh hpc1-login"
+  enter: "ssh -o BatchMode=yes hpc1-login"
   job_exec: "srun --jobid={job} --overlap"
   runner: herdr
   agent: codex              # default agent kind on this target
 
 corp:                       # type B2: jumper for scheduler commands only, in-house scheduler
-  enter: "ssh corp-jumper"
+  enter: "ssh -o BatchMode=yes corp-jumper"
   job_exec: "myrun --job {job} --"
   runner: local
   workdir: /proj/<user>/myworks       # not purged, seen on compute nodes

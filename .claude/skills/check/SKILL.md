@@ -11,7 +11,7 @@ You run as a subagent of the master. You **look, decide, record, and report**. Y
 
 Argument: a task name. With no argument, check every open task: `status` is `running`, `blocked`, `idle`, or `killed`.
 
-For each task, read `tasks/<task>.md`. `S` is its `session`, `A` is its `agent_name` (default: the task name), `W` is its workspace path, and `E` is the target's `enter` command from `targets.yaml` (none for a local agent). Remote form: put the whole remote command in single quotes, `E '<command>'`. Use `ssh -o BatchMode=yes`.
+For each task, read `tasks/<task>.md`. `S` is its `session`, `A` is its `agent_name` (default: the task name), `W` is its workspace path, and `E` is the target's `enter` command from `targets.yaml` (none for a local agent). Remote form: put the whole remote command in single quotes, `E '<command>'`. `E` already has `-o BatchMode=yes`; if it does not, add it.
 
 1. **Agent state.** `herdr --session S agent list` on the side where the agent runs. Find the agent `A`. Ignore the agent named `master`.
    If the command fails, find out why before you decide anything:

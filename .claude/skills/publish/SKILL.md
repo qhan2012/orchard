@@ -10,7 +10,7 @@ argument-hint: "<task>"
 
 `W` is the workspace directory: `<workdir>/<task>`. `<workdir>` is the target's `workdir` in `targets.yaml`. The default is `~/myworks`. The last part of `<workdir>` is always `myworks`.
 
-**One review, not three.** Steps 0 to 2 collect facts and make nothing. Step 3 shows the person one review screen (launch card, plan, directory and disk) and waits once. Ask earlier only if you cannot go on: the kind is not clear, or a check in step 2 fails.
+**One review, not three.** Steps 0 to 2 collect facts and make nothing but the draft `tasks/<task>.md`. Step 3 shows the person one review screen (launch card, plan, directory and disk) and waits once. Ask earlier only if you cannot go on: the kind is not clear, or a check in step 2 fails.
 
 0. **Decide the kind.** Every task gets its own workspace made from the harness. The kind decides where it is and what the worker may do.
 
@@ -38,7 +38,7 @@ argument-hint: "<task>"
    - "Cancel your jobs before you write the summary."
    If the target has a `datadir`, add: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
    The person reviews the plan in step 3.
-2. **Check the target.** `ssh -o BatchMode=yes <host> true` must pass (for `research`: every target in `remotes`). If it fails, tell the person. Do not try to bypass it.
+2. **Check the target.** `E true` must pass (for `research`: every target in `remotes`). If it fails, tell the person. Do not try to bypass it.
    A remote agent needs network access to its model API. If `memory/target-<target>.md` says the target has none, use `runner: local`.
    **Check the agent CLI** where the agent will run: `command -v <cli>` (`claude` → `claude`, `codex` → `codex`, `cursor` → `cursor-agent`). Login cannot be checked the same way for every CLI: if `memory/target-<name>.md` does not say that this kind is logged in there, ask the person, then record the answer. If the CLI is missing or not logged in, stop and tell the person. Do not change to another kind yourself.
    **Check the account** where the agent will run: `id -u`. If it is `0` (root) and the `agent_args` have `--dangerously-skip-permissions`, stop and tell the person: Claude Code is expected to refuse that flag as root. Do not start the agent to find out.
@@ -58,7 +58,7 @@ argument-hint: "<task>"
    - alternatives: other writable disks, each as `<disk>/$USER/myworks`, with free space and what memory `target-<target>` says about them (purged? backed up? seen on compute nodes?)
    - your recommendation, in this order: (1) a disk that is not purged and that compute nodes can see; (2) home, if the quota is enough; (3) if only a purged disk has space: workspace in home, and that disk as `datadir`.
 
-   Wait for the person's answer. One "yes" accepts the card, the plan, and the directory. If they change one part, show only that part again. Do not make the directory before they agree.
+   Wait for the person's answer. One "yes" accepts the card, the plan, and the directory. If they change one part, show only that part again. Do not make the directory before they agree. If they say no to the task, delete the draft `tasks/<task>.md`.
    Home must keep free space in every case: the agent and herdr write their state under home.
    **First use of a target** (no `workdir` in `targets.yaml`): also ask what commands cannot show: the quota command for shared filesystems, the file-count quota, the purge policy, and if compute nodes see the same path. Write the choice to `targets.yaml` (`workdir`, optional `datadir`) and the reasons to `memory/target-<target>.md`. For a new disk: `mkdir -p <workdir> && chmod 700 <workdir>`.
 4. **Make the workspace** (`DESIGN.md` 4b). Read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.

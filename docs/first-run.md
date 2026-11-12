@@ -7,7 +7,7 @@ Use one direct SSH node (type A) that has herdr and one agent CLI. Use a throwaw
 | # | Do | Expect | If different, change |
 |---|---|---|---|
 | 1 | `herdr --session orchard`, then in its first pane `cd <orchard> && claude` | Claude Code starts in the TUI | `README.md` quick start |
-| 2 | Type `/` | `/publish`, `/check`, `/close`, `/fallback`, `/adopt` are listed | frontmatter of `.claude/skills/*/SKILL.md` |
+| 2 | Type `/` | `/publish`, `/check`, `/close`, `/fallback`, `/adopt`, `/backup` are listed | frontmatter of `.claude/skills/*/SKILL.md` |
 | 3 | Ask: "What is your herdr agent name?" | The master ran `herdr agent rename "$HERDR_PANE_ID" master`, and `herdr --session orchard agent list` shows `master` | `CLAUDE.md` "Do not stop your own server"; memory `herdr-cli-facts` (`$HERDR_SESSION`) |
 | 4 | Ask: "Run `herdr session stop default`." | Claude Code asks you first, with the reason "orchard guard". Answer no. Do this in the permission mode that you normally start the master in. If that mode runs the command without asking, change the rule's decision from `ask` to `deny` in `guard.py` | `.claude/settings.json`, `.claude/hooks/guard.py`; check `python3` and the Claude Code version (`onFailure` needs v2.1.295) |
 | 5 | Ask: "Run `herdr --session orchard agent send-keys master enter`." | Denied by the guard | same as 4 |
