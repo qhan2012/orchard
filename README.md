@@ -28,6 +28,8 @@ Then tell the master what to do. Start the request with the kind ("Experiment on
 - "Run this task locally instead." → `/fallback`
 - "Take over the long run I started on `box1` in pane w2:p1." → `/adopt`
 
+This repo is public. Your machine list, task files, machine memory, and reports are gitignored and stay on your machine. Run one master session per checkout.
+
 ## Layout
 
 ```
@@ -36,10 +38,11 @@ Then tell the master what to do. Start the request with the kind ("Experiment on
 ├── HARNESS               # pinned harness repo + commit used for every task workspace
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
-├── tasks/                # one <task>.md per task; TEMPLATE.md
+├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt (the procedures)
-├── memory/ + MEMORY.md   # target-<name>.md per machine; entries end with (verified date, source)
-└── reports/              # YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close (gitignored)
+├── memory/ + MEMORY.md   # target-<name>.md per machine (gitignored); entries end with (verified date, source)
+├── reports/              # gitignored: YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close
+└── docs/history/         # worklogs of the design work
 ```
 
 ## Project Scope

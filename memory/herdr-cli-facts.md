@@ -20,5 +20,6 @@ Source for every line below: github.com/ogulcancelik/herdr tag `v0.8.2`, `docs/v
 - After a server restart, processes are gone. herdr restores layout and cwd; the agent conversation returns only with native agent session restore. (verified 2026-11-11, v0.8.2 docs `session-state`)
 - `agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N]`. Without `--lines`, recent sources read 80 rows. (verified 2026-11-11, v0.8.2 docs)
 - A timeout or server error prints JSON on stderr and exits 1. Usage errors exit 2. A timeout does not prove that a prompt was not delivered. (verified 2026-11-11, v0.8.2 docs)
+- With no `--session`, the CLI uses `$HERDR_SESSION` (`src/session.rs`). So inside a herdr pane, a plain `herdr ...` command should reach the pane's own session. Not confirmed on a live herdr. (verified 2026-11-12, v0.8.2 source)
 - Do not run bare `herdr`: it opens the TUI. (verified 2026-11-11, v0.8.2 docs)
 - Not in 0.8.2 docs: `herdr machine` (saved SSH profiles). The skills do not use it. (verified 2026-11-11, v0.8.2 docs)
