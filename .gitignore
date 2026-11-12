@@ -27,3 +27,5 @@ tasks/*
 memory/target-*.md
 reports/*
 !reports/.gitkeep
+files/*
+!files/.gitkeep

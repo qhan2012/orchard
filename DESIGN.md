@@ -86,6 +86,14 @@ latest: iteration 3, reproducer down to 40 lines
 ---
 ```
 
+**Input files.** `files/` is the inbox. The person puts the files for a new
+task there (logs, configs, notes, a spec). At publish, after the person
+agrees, the master moves the files that belong to the task to
+`tasks/<task>/`, lists them in `files:`, and copies them to the workspace
+`files/` directory, which the harness has for input files. The master takes
+only the files that the person names. The copy in `tasks/<task>/` is the
+master's record.
+
 The body holds the plan draft. After publish, the plan in the workspace
 `README.md` is the source of truth. The task file is the index of where
 everything is.
@@ -361,7 +369,8 @@ orchard/
 ├── CLAUDE.md             # master rules
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
-├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
+├── files/                # inbox for the input files of a new task (gitignored)
+├── tasks/                # one <task>.md per task, input files in <task>/ (gitignored); TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt, backup
 ├── .claude/hooks/        # guard.py: three hard rules (section 10)
 ├── memory/ + MEMORY.md   # target-*.md are gitignored
@@ -388,14 +397,18 @@ Base: the harness memory (`memory/<name>.md` with frontmatter, index in
 
 ## 8a. Backup of the site data
 
-The site data (`targets.yaml`, task files, machine memory, reports) is
-gitignored here. The person can give, at runtime, a subfolder of a private
+The site data (`targets.yaml`, task files with their input files, machine
+memory, reports) is gitignored here. The person can give, at runtime, a subfolder of a private
 GitHub repo. `/backup` copies the site data there, commits, and pushes. The
 location is in the gitignored file `backup.local`.
 
 - The master checks that the repo is private and is not this public repo.
-- A backup runs after publish, adopt, close, and fallback, and on request.
-  It does not run after each check.
+- A backup runs after publish, adopt, close, and fallback, when a check
+  reports `done`, and on request. It does not run after each check.
+- It also copies the plan, worklog, and memory of each running **local**
+  workspace to `workspaces/<task>/`, because that state is only on this
+  machine. A remote workspace comes back at close.
+- Files of 10 MB or more are skipped and listed for the person.
 - A backup never removes files, and a restore never overwrites files. So a
   mistake on one side does not destroy the other side.
 

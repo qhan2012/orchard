@@ -143,3 +143,9 @@
 - Consistency: README (one review screen, six skills, goal), `docs/first-run.md` step 2 (six skills), task template (`target: local` wording), `DESIGN.md` 3 example (`unreachable`), `/fallback` step 1 (directory part of `/publish` step 3), `/adopt` (task name rule, `unreachable`), `/publish` (draft task file is deleted if the person says no), `/backup` (empty repo).
 - Mechanical checks: skill frontmatter parses; every `/skill` reference names one of the six skills or a Claude Code command; step references match; code fences balance; every `enter` in the example has `BatchMode`.
 - Left as is: a running local workspace has no backup until close; `/fallback` waits for the person's directory review.
+
+## 20. Input files inbox; backup of local workspaces (2026-11-12)
+- Need (from user): a `files/` directory where the person puts the files of a new task; orchard moves them under `tasks/` when it makes the task. Also back up local workspaces.
+- Reading used: `files/` is an inbox. At publish, after the person agrees, the named files move to `tasks/<task>/` (next to `tasks/<task>.md`) and are copied to the workspace `files/` directory, which the harness already has. The task file keeps its path, so no other skill changes.
+- `/backup`: now also copies `README.md`, `MEMORY.md`, `memory/`, `reports/` of each running local workspace to `workspaces/<task>/`; runs also when a check reports `done`; skips files of 10 MB or more and lists them; restore leaves `workspaces/` out.
+- Verified locally with temporary directories: a file name with a space is copied; an 11 MB file is skipped and listed; the workspace copy lands in `workspaces/<task>/`; restore brings back a deleted task file and does not write `workspaces/` into the orchard root.

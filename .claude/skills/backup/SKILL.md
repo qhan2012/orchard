@@ -25,14 +25,31 @@ The location is in `backup.local` (gitignored), one line: `<absolute path of a l
 ```bash
 git -C C pull -q --ff-only
 mkdir -p C/F
-tar -cf - --exclude 'tasks/TEMPLATE.md' --exclude '.gitkeep' \
-  $(ls -d targets.yaml tasks memory/target-*.md reports 2>/dev/null) | tar -C C/F -xf -
+{ ls -d targets.yaml memory/target-*.md 2>/dev/null
+  find tasks reports -type f -size -10M ! -name TEMPLATE.md ! -name .gitkeep
+} | tar -cf - -T - | tar -C C/F -xf -
+find tasks reports -type f -size +10M        # these are skipped: tell the person
+```
+
+Then the **running local workspaces**. For each task file with `workspace: local:<path>` and a `status` that is not `closed`:
+
+```bash
+mkdir -p C/F/workspaces/<task>
+(cd <path> && tar -cf - $(ls -d README.md MEMORY.md memory reports 2>/dev/null)) | tar -C C/F/workspaces/<task> -xf -
+```
+
+This is the recovery state of a local-runner or research task (plan, worklog, memory). Code and experiment output are not copied. A remote workspace is not copied here: its record comes back at `/close`.
+
+Then commit and push:
+
+```bash
 git -C C add F
 git -C C commit -q -m "orchard backup <date>"     # "nothing to commit" is fine
 git -C C push -q
 ```
 
-- It copies only the site data. It never removes a file from the backup, so a file that is lost here stays there.
+- It copies only the site data: `targets.yaml`, task files with their input files in `tasks/<task>/`, machine memory, and reports. A file of 10 MB or more is skipped, because a git repo is the wrong place for it: list the skipped files for the person. The inbox `files/` is not copied.
+- It never removes a file from the backup, so a file that is lost here stays there.
 - A new, empty repo has nothing to pull: skip the `pull` then, and push with `git -C C push -q -u origin HEAD`.
 - If `pull` or `push` fails for another reason, report the error and stop. Do not force. The copy in `C/F` is still there for the next run.
 - Report one line: how many files changed, and the commit.
@@ -43,7 +60,7 @@ Only when the person asks. It brings back missing files and never overwrites a f
 
 ```bash
 git -C C pull -q --ff-only
-tar -C C/F -cf - . | tar -xkf -      # -k keeps existing files; tar then exits non-zero and lists them, which is expected
+tar -C C/F -cf - --exclude ./workspaces . | tar -xkf -      # -k keeps existing files; tar then exits non-zero and lists them, which is expected
 ```
 
-Show the person which files came back. If they want an existing file replaced by the backup copy, they say which one, and you copy that one file.
+Show the person which files came back. The copies of local workspaces are in `C/F/workspaces/<task>/`. Restore does not put them back: tell the person the path, and copy one into a workspace only when they say so. If they want an existing file replaced by the backup copy, they say which one, and you copy that one file.

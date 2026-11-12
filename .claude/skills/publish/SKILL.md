@@ -22,6 +22,7 @@ argument-hint: "<task>"
    If the request does not say which, ask. Do not guess.
    **Task name.** It is also the herdr agent name, so it must match `[a-z][a-z0-9_-]{0,31}`: a lowercase letter first, then lowercase letters, digits, `_`, or `-`, 32 characters at most. It must not be `master`, and no `tasks/<task>.md` may exist. If the person's name does not fit, propose one that does.
    **Agent kind** (herdr `--kind`: `claude`, `codex`, `cursor`, ...). Take the first that applies: (1) what the person said in the request; (2) `agent` of the place where the agent runs, in `targets.yaml` (the target, or the `local` entry for `runner: local` and `research`); (3) `claude`. Write it to `agent:` in the task file.
+   **Input files.** The person puts files for a new task in `files/` (the inbox). Use the files that the person names. If they name none and `files/` is not empty, list what is there and ask which belong to this task. Do not guess, and do not take files that they did not name. Do not move anything yet.
    Prepare the launch card. It is part of the review screen in step 3:
    ```
    Task:     <task>
@@ -30,6 +31,7 @@ argument-hint: "<task>"
    Workspace: <where>:<workdir>/<task>
    Remotes:  <for research: each target and the directories to read>
    Args:     <agent_args, for example --dangerously-skip-permissions>
+   Files:    <input files from files/, with total size; or none>
    Goal:     <one line>
    ```
    For `research`: read `tasks/*.md` to find the workspaces of the tasks to study. For a closed task, use the local copy in `reports/tasks/<task>/`. Write the list to `remotes:` in the task file.
@@ -58,10 +60,10 @@ argument-hint: "<task>"
    - alternatives: other writable disks, each as `<disk>/$USER/myworks`, with free space and what memory `target-<target>` says about them (purged? backed up? seen on compute nodes?)
    - your recommendation, in this order: (1) a disk that is not purged and that compute nodes can see; (2) home, if the quota is enough; (3) if only a purged disk has space: workspace in home, and that disk as `datadir`.
 
-   Wait for the person's answer. One "yes" accepts the card, the plan, and the directory. If they change one part, show only that part again. Do not make the directory before they agree. If they say no to the task, delete the draft `tasks/<task>.md`.
+   Wait for the person's answer. One "yes" accepts the card, the plan, and the directory. If they change one part, show only that part again. Do not make the directory before they agree. If they say no to the task, delete the draft `tasks/<task>.md`. The input files are still in `files/`.
    Home must keep free space in every case: the agent and herdr write their state under home.
    **First use of a target** (no `workdir` in `targets.yaml`): also ask what commands cannot show: the quota command for shared filesystems, the file-count quota, the purge policy, and if compute nodes see the same path. Write the choice to `targets.yaml` (`workdir`, optional `datadir`) and the reasons to `memory/target-<target>.md`. For a new disk: `mkdir -p <workdir> && chmod 700 <workdir>`.
-4. **Make the workspace** (`DESIGN.md` 4b). Read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.
+4. **Make the workspace** (`DESIGN.md` 4b). First move the task's input files out of the inbox: `mkdir tasks/<task> && mv files/<name> ... tasks/<task>/`. Write their names to `files:` in the task file. Then read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.
    ```bash
    test -e W && echo EXISTS     # EXISTS: stop and tell the person
    git init -q W
@@ -76,6 +78,7 @@ argument-hint: "<task>"
    Write the absolute path of `W` to `workspace:` (and `remote_dir:`) in the task file.
 5. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local` and `kind: experiment`, add the `### Remote` block (`DESIGN.md` 4). For `kind: research`, add the `### Remotes (read-only)` block (`DESIGN.md` 4e).
    To write a remote file: `E 'cat > W/README.md' < local-copy`.
+   **Send the input files.** Copy `tasks/<task>/` into the workspace `files/` directory (the harness has it for this): on a target, `tar -C tasks/<task> -cf - . | E 'tar -C W/files -xf -'`; locally, the same without `E`. The copy in `tasks/<task>/` stays as the master's record. Add one line to the plan Constraints: "Input files are in `files/`: <names>."
 6. **Seed memory.** If `memory/target-<target>.md` exists here (for `research`: one per target in `remotes`), copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`. The harness copy has no `MEMORY.md`: make it first, with the heading `# Memory index`.
 7. **Start the agent in herdr** (see memory `herdr-cli-facts`). Use session `orchard`. Set `session: orchard` and `agent_name: <task>` in the task file.
    ```bash
