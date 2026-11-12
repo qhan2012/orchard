@@ -40,6 +40,7 @@ This repo is public. Your machine list, task files, machine memory, and reports 
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt (the procedures)
+├── .claude/hooks/        # guard.py + ../settings.json: three hard rules (needs python3)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine (gitignored); entries end with (verified date, source)
 ├── reports/              # gitignored: YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close
 └── docs/history/         # worklogs of the design work
@@ -61,7 +62,7 @@ This repo is public. Your machine list, task files, machine memory, and reports 
 
 **Scope boundary.**
 - In scope: the machine list, task files, skills, memory.
-- Out of scope: any code (see `DESIGN.md` 9), installing herdr or agents on targets, changing cluster configuration, merging code.
+- Out of scope: any code except the guard hook (see `DESIGN.md` 9 and 10), installing herdr or agents on targets, changing cluster configuration, merging code.
 
 **Constraints.**
 - The local machine has no scheduler. Scheduler commands run on the head or jumper.

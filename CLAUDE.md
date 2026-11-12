@@ -52,6 +52,10 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 - **Do not stop your own server.** You may run inside the local herdr session `orchard`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). If `$HERDR_SESSION` is not `orchard`, tell the person: local workers start in session `orchard`, so they will not be next to you. Never stop your server or send a prompt to `master`.
 - **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
 
+## Guard hook
+
+`.claude/hooks/guard.py` checks each Bash command before it runs. It has three rules: it denies `herdr ... send-keys`, it asks the person before `herdr ... server stop` or `session stop`, and it denies a forced `git add`. If it stops a command, do not look for another way to do the same thing. Tell the person. All other rules in this file are still yours to follow: the hook does not check them.
+
 ## Public repo
 
 This repo is public. `targets.yaml`, `tasks/` (except the template), `memory/target-*.md`, and `reports/` are gitignored, because they hold host names, paths, and results. Never write site data into a tracked file (`README.md`, `DESIGN.md`, `MEMORY.md`, skills, other memory files). Before a commit, read `git status` and the diff. These local files have no git backup.
