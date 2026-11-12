@@ -32,7 +32,7 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    Agent:    <agent kind>, runs on <target | local>
    Workspace: <where>:<workdir>/<task>
    Remotes:  <for research: each target and the directories to read>
-   Args:     <agent_args, for example --dangerously-skip-permissions>
+   Args:     <agent_args, for example --dangerously-skip-permissions --model claude-opus-5-5>
    Files:    <input files from files/, with total size; or none>
    From:     <the research task whose proposal this task uses; or none>
    Then:     <research only: the follow-up experiment approved now: target, agent, args, directory; or none>
@@ -107,7 +107,7 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (their own herdr window for a local agent, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
    After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
    Never run bare `herdr`: it opens the TUI.
-   **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions`. An `agent_args` entry for the kind in `targets.yaml` replaces the default. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
+   **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions --model claude-opus-5-5`: no permission prompts, and the model is Opus 5.5 (the person's decision). An `agent_args` entry for the kind in `targets.yaml` replaces the whole default, so it must name the model too if it wants one. If the person names another model for one task, use it for that task and show it on the launch card. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
    A local worker gets its own herdr workspace (`--no-focus`) in the person's session, so the master pane does not change. That session also holds the person's own panes and agents. Touch only the agents that have a task file here.
 8. **Record.** Set `status: running` in the task file. If the review set a check cadence, write it to `check:` and start the `/loop`. Add a worklog entry with the task, target, runner, workspace, and harness commit.
    After the worker's first job runs, check that the compute node sees `W` (and `datadir`). Record the result in `memory/target-<target>.md`.

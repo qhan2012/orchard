@@ -8,13 +8,13 @@
 # datadir: optional, for large outputs when the only big disk is purged.
 # agent:   optional default agent kind for agents that run on this entry (herdr --kind). Default: claude.
 # agent_args: optional, per kind: native CLI arguments passed after `--` at start.
-#          Default for claude workers: ["--dangerously-skip-permissions"] (no permission prompts).
-#          An entry here replaces the default. Other kinds have no default: set their flag here.
+#          Default for claude workers: ["--dangerously-skip-permissions", "--model", "claude-opus-5-5"]
+#          (no permission prompts; model Opus 5.5). An entry here replaces the whole default. Other kinds have no default: set their flag here.
 
 local:                      # this machine: research tasks and runner: local agents
   agent: claude
   # agent_args:
-  #   claude: ["--dangerously-skip-permissions"]   # the default; write another value to change it
+  #   claude: ["--dangerously-skip-permissions", "--model", "claude-opus-5-5"]   # the default; write another value to change it
   #   codex: [...]                                 # no default: you choose
 
 box1:                       # type A: direct node
