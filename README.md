@@ -1,75 +1,52 @@
 # orchard
 
-Orchestration for agents: a light control plane for a **master agent**. The master runs on your local machine. It can:
+A harness for a **master agent**. The master runs on your local machine. It plans, publishes, and monitors tasks. Each task runs in a coding agent inside [herdr](https://github.com/ogulcancelik/herdr) on a remote machine, in a workspace made from [qhan2012/harness](https://github.com/qhan2012/harness). If a remote machine often kills agents, the agent runs locally and works on the remote through SSH.
 
-- check SSH nodes (load, memory, GPU, herdr),
-- submit and manage Slurm jobs. The local machine has no Slurm, so every Slurm command runs on the cluster **head node** over SSH,
-- start and control [herdr](https://github.com/ogulcancelik/herdr) sessions on a plain node or inside a Slurm job.
-
-```
-local (master agent) ──ssh──► head node ── sbatch / squeue / sacct / scancel
-        │                         │
-        │                         └─ srun --jobid=J --overlap ─► compute node: herdr server + agents
-        └──ssh──► plain node ─► herdr server + agents
-```
-
-The Python package and CLI are named `orchardctl`. The name `orchard` on PyPI belongs to an unrelated project, which also claims the `orchard` import and CLI.
+There is no program here. The master uses `ssh` and `herdr` directly and follows three Claude Code skills. Read `DESIGN.md` for the full design.
 
 ## Quick start
 
 ```bash
-pip install -e '.[dev]'
-cp inventory.example.yaml inventory.yaml      # edit hosts; keep ProxyJump etc. in ~/.ssh/config
-ssh -o BatchMode=yes <head> true              # orchard never prompts for a password
-pytest -q                                     # offline tests (fake transport)
-
-orchardctl node box1
-orchardctl slurm hpc1 queue
-orchardctl slurm hpc1 launch-herdr --opt time=02:00:00 --wait 600   # -> job_id
-orchardctl herdr --cluster hpc1 --job <id> start rev --kind claude --cwd '~/proj'
-orchardctl herdr --cluster hpc1 --job <id> prompt rev "Run the tests and report." --timeout-ms 600000
-orchardctl herdr --cluster hpc1 --job <id> read rev --lines 200
-orchardctl slurm hpc1 cancel <id>
+cp targets.example.yaml targets.yaml     # edit; keep ProxyJump etc. in ~/.ssh/config
+ssh -o BatchMode=yes <host> true         # the master never answers a password prompt
 ```
 
-Every command prints JSON on stdout. On an error, it prints `{"error", "message"}` on stderr and exits with code 1. See `runbooks/` for the standard procedures.
+Then start Claude Code in this directory and tell it what to do, for example:
+
+- "Plan a task on `box1`: find why the MoE run gives NaN." → `/publish`
+- "Check all tasks." → `/check`
+- "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
+- "Run this task locally instead." → `/fallback`
 
 ## Layout
 
 ```
 .
-├── src/orchardctl/
-│   ├── transport.py   # SSHTransport (system OpenSSH), SrunTransport (into a running job via head)
-│   ├── inventory.py   # load + check inventory.yaml
-│   ├── slurm.py       # SlurmAdapter: submit / queue / job / cancel / wait_running; ownership tag
-│   ├── herdr.py       # HerdrClient: server up/down/status, agents, start, prompt, wait, read, keys
-│   └── cli.py         # orchardctl entry point (JSON out)
-├── tests/             # offline tests with a fake transport
-├── runbooks/          # procedures the master agent follows
-├── inventory.example.yaml
-├── reports/           # YYYY-MM-DD_worklog.md + _summary.md
-├── memory/ + MEMORY.md
-├── state/             # runtime state (gitignored)
-└── CLAUDE.md          # canonical agent instructions (AGENTS.md, .cursorrules point here)
+├── DESIGN.md             # the design, section by section
+├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
+├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
+├── tasks/                # one <task>.md per task; TEMPLATE.md
+├── .claude/skills/       # publish, check, fallback (the procedures)
+├── memory/ + MEMORY.md   # target-<name>.md per machine; entries end with (verified date, source)
+└── reports/              # YYYY-MM-DD_worklog.md + _summary.md
 ```
 
 ## Project Scope
 
-**Goal.** A master agent can bring up, watch, drive and tear down remote coding-agent sessions (herdr) on SSH nodes and Slurm clusters from one local machine, safely and reproducibly.
+**Goal.** From one local machine, a master agent plans, publishes, and monitors agent tasks on remote machines, and moves a task to a local agent when the remote kills agents.
 
 **Success criteria.**
-1. From a clean checkout and a valid inventory, `launch-herdr`, then `herdr start`, then `prompt`, then `read`, then `cancel` works end to end on a real cluster.
-2. orchard never cancels or kills a job or process it did not start, unless a person confirms it (`--force`).
-3. Each action is one auditable shell command (`-v` logs it).
+1. Publish: a task gets a workspace at `~/myworks/<task>/` made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
+2. Monitor: a check gives the right status (`running`, `done`, `blocked`, `idle`, `killed`) from herdr and the workspace files.
+3. Fallback: after two kills, the task continues with a local agent from the last worklog entry.
+4. The master never stops or changes something it did not start, unless a person confirms it.
 
-**Verifier.** `pytest -q` (offline). `runbooks/smoke-test.md` on a real head node (online).
+**Verifier.** Run one real task through publish, check, and done on a direct node. Then one through fallback.
 
 **Scope boundary.**
-- In scope: SSH nodes, Slurm through the head node, herdr CLI control.
-- Out of scope for v0.1: other schedulers (PBS, LSF, K8s), a long-running daemon, a web UI, installing herdr on targets, and changing cluster configuration.
+- In scope: the machine list, task files, skills, memory.
+- Out of scope: any code (see `DESIGN.md` 9), installing herdr or agents on targets, changing cluster configuration, merging code.
 
 **Constraints.**
-- Local machine has no Slurm.
-- Python ≥ 3.10.
-- The only runtime dependency is PyYAML.
+- The local machine has no scheduler. Scheduler commands run on the head or jumper.
 - SSH uses the system `ssh`, so `~/.ssh/config` applies as is.
