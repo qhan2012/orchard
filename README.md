@@ -28,6 +28,8 @@ Then tell the master what to do. Start the request with the kind ("Experiment on
 - "Run this task locally instead." → `/fallback`
 - "Take over the long run I started on `box1` in pane w2:p1." → `/adopt`
 
+Before the first real task, do `docs/first-run.md` (about 15 minutes). It checks each thing that this repo has not yet seen on a live machine.
+
 ### Keep the master's context small
 
 Many small questions fill the master's context, mostly with command output. The master keeps its state in files, so its context can be thrown away at any time.
@@ -54,7 +56,7 @@ This repo is public. Your machine list, task files, machine memory, and reports 
 ├── .claude/hooks/        # guard.py + ../settings.json: three hard rules (needs python3)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine (gitignored); entries end with (verified date, source)
 ├── reports/              # gitignored: YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close
-└── docs/history/         # worklogs of the design work
+└── docs/                 # first-run.md (do this first); history/ = worklogs of the design work
 ```
 
 ## Project Scope

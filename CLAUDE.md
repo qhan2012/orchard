@@ -46,6 +46,7 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 ## Remote-control rules
 
 - **Never block on a prompt.** Use `ssh -o BatchMode=yes`. If SSH authentication fails, report it to the person. Do not try to bypass it.
+- **Quote remote commands.** `ssh` joins its arguments and the remote shell parses them again, so quotes that you write locally are lost. Always send one single-quoted string: `ssh -o BatchMode=yes <host> 'herdr --session orchard agent prompt <task> "Read README.md."'`. Use double quotes inside it. A prompt that you send must not contain `'`, `"`, `` ` ``, `$`, or `\`. If the text needs more than one plain sentence, write it to a file in the workspace and send "Read <file>".
 - **A timeout is not proof of failure.** After a herdr timeout, read the agent's screen before you send the prompt again. Otherwise you can submit the same prompt twice.
 - **Unreachable is not killed.** If `ssh` fails, you know nothing about the agent. Report it. Do not count a kill and do not restart.
 - **Do not answer an agent's approval dialog without a person.** If an agent is `blocked`, read its screen and report. Do not send keys to approve.
