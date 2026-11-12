@@ -108,3 +108,10 @@
 - Red flag 1: the skills wrote `E herdr ... agent prompt <task> "text"`. `ssh` joins its arguments, so the remote shell splits the text. Shown with a stand-in ssh: 10 arguments without the outer quotes, 4 with them. Fix: rule "Quote remote commands" in `CLAUDE.md`; every skill names the remote form; `/publish` step 7 shows a full example.
 - Red flag 2: a new workspace directory can make the agent ask a first-start question. Then herdr reports `blocked` and refuses the prompt, and the master may not send keys. Fix: `/publish` step 7 reads the status before the prompt, and on `blocked` asks the person to answer in the TUI. It also checks for `working` after the prompt.
 - New `docs/first-run.md`: 12 steps, each checks one assumption that was taken from docs or source only.
+
+## 15. Worker permissions (2026-11-12)
+- DECISION (user): research and experiment workers both run in skip-permission mode. The person chooses the master's mode at launch, so the repo sets nothing for the master (no allow list for read-only commands).
+- Change: `/publish` uses `--dangerously-skip-permissions` as the default `agent_args` for `claude` workers and shows it on the launch card. `targets.yaml` can replace it per entry and kind. Other kinds have no default.
+- Recorded in `DESIGN.md` 4f: a worker can run any command as the person's account; workspace scope and research read-only are instructions only; a research worker reads web pages, which adds a prompt-injection risk. The person accepted this.
+- Not added: deny rules such as `git push`. A task's worker may open a PR for its own repo, so a blanket deny would block allowed work.
+- Not verified: if skip mode also skips the first-start trust question. `docs/first-run.md` step 9 checks it.

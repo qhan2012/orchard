@@ -197,9 +197,21 @@ stops. It does not change the kind itself.
 What changes with the kind:
 - Rules: nothing. The harness has `AGENTS.md` and `.cursorrules`, which
   point to `CLAUDE.md`.
-- Permissions for unattended runs: each CLI has its own flags. They go in
-  `agent_args` per kind, chosen by the person, and herdr passes them after
-  `--`. Without them, a long task can stop at approval prompts (`blocked`).
+- Permissions: workers run without permission prompts, for both task
+  kinds. This is the person's decision (2026-11-12): nobody is there to
+  answer a prompt, and a worker that stops at each command cannot do a long
+  task. For `claude` the default `agent_args` are
+  `--dangerously-skip-permissions`; herdr passes them after `--`. An entry
+  in `targets.yaml` replaces the default. Other kinds have no default: the
+  person sets their flag, and without one the worker can stop at approval
+  prompts (`blocked`).
+  What this means: a worker can run any command as the person's account on
+  that machine. "Stay inside the workspace" and "read-only" (research) are
+  instructions only. A research worker also reads web pages, so text on a
+  page could push it to run a command. The person accepted this. To limit
+  it for one target or task, set other `agent_args` there.
+- The master's permission mode is not set by this repo. The person chooses
+  it when they start the master.
 - Resume after close: herdr 0.8.2 can resume `claude`, `codex`, and
   `cursor` from a session id, if its integration reported one.
 
@@ -403,7 +415,8 @@ does not apply to workers.
 - A remote agent needs network access to its model API. A target without it
   must use `runner: local`. Record this in the target's memory.
 - Login of an agent CLI cannot be checked by a command; the master asks.
-  Without `agent_args`, a long task can stop at approval prompts.
+- Workers skip permission prompts (4f). For kinds other than `claude`, the
+  person must set the flag in `agent_args`.
 - Resume after close needs the herdr integration of that agent on that
   machine.
 - `/loop` ends with the master session. The master offers to start loops
