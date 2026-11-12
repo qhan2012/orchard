@@ -56,8 +56,9 @@ Config goes in `targets.yaml`. Reasons and quirks go in memory (section 8).
 
 ## 3. Task: `tasks/<task>.md`
 
-One file per task. The task name is a short, unique, kebab-case code name. It
-is also the workspace directory name.
+One file per task. The task name is unique and matches
+`[a-z][a-z0-9_-]{0,31}`, because it is also the workspace directory name and
+the herdr agent name.
 
 ```yaml
 ---
@@ -178,9 +179,11 @@ A new experiment that the research asks for is a separate `experiment`
 task. The person decides, and the master publishes it. So analysis and
 changes to remote state stay in different agents.
 
-To start the right kind, the master does not guess. It shows the person a
-launch card first (task, kind, where the agent runs, workspace, remotes,
-goal) and waits. If the request does not say the kind, it asks.
+To start the right kind, the master does not guess. If the request does not
+say the kind, it asks. The launch card (task, kind, where the agent runs,
+workspace, remotes, args, goal) is the first part of the one review screen
+that the person gets before anything is made: card, plan, then directory
+and disk (4a). One answer accepts all three.
 
 ### 4f. Agent kind
 

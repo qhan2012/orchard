@@ -115,3 +115,10 @@
 - Recorded in `DESIGN.md` 4f: a worker can run any command as the person's account; workspace scope and research read-only are instructions only; a research worker reads web pages, which adds a prompt-injection risk. The person accepted this.
 - Not added: deny rules such as `git push`. A task's worker may open a PR for its own repo, so a blanket deny would block allowed work.
 - Not verified: if skip mode also skips the first-start trust question. `docs/first-run.md` step 9 checks it.
+
+## 16. Publish fixes (2026-11-12)
+- Root: `/publish` step 2 runs `id -u`. As root with `--dangerously-skip-permissions` it stops. Basis: recall that Claude Code refuses the flag as root; not checked against docs.
+- `MEMORY.md`: the pinned harness (fc24f24) has no `MEMORY.md` (checked with `git ls-tree`). `/publish` step 6 makes it. `/fallback` and `/close` copy only items that exist (`ls -d ... 2>/dev/null` inside the remote command; tested locally).
+- One review: the launch card, the plan, and the directory review were three stops. Now steps 0 to 2 only collect, and step 3 shows one screen and waits once. Step numbers did not change.
+- Task name: must match herdr's agent name rule `[a-z][a-z0-9_-]{0,31}` (v0.8.2 docs), not be `master`, and not exist. Checked in step 0.
+- `docs/first-run.md` step 4: test the guard's `ask` in the master's usual permission mode; if it does not ask, change it to `deny`.

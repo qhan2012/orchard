@@ -11,7 +11,7 @@ Do this when `kills` reaches 2, or when the person says so. For a task with `sta
 `E` is the target's `enter` command. Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules).
 
 1. **Make the local harness.** Do `/publish` steps 3 and 4 locally (the directory review included), with the `harness:` sha from the task file (not `HARNESS`, which can be newer). The local directory is `~/myworks/<task>` unless the person chooses another. If it exists, stop and tell the person.
-2. **Bring the state back.** Copy from the remote workspace to the local one: `README.md`, `MEMORY.md`, `memory/`, `reports/`. Example: `E 'tar -C <remote workspace> -cf - README.md MEMORY.md memory reports' | tar -C <local workspace> -xf -`. Leave `codebases/` and `experiments/` on the remote.
+2. **Bring the state back.** Copy from the remote workspace to the local one: `README.md`, `MEMORY.md`, `memory/`, `reports/`. Example: `E 'cd <remote workspace> && tar -cf - $(ls -d README.md MEMORY.md memory reports 2>/dev/null)' | tar -C <local workspace> -xf -`. This copies only the items that exist (a workspace can have no `MEMORY.md`). Leave `codebases/` and `experiments/` on the remote.
 3. **Add the `### Remote` block** to the local `README.md` (`DESIGN.md` 4). `Remote dir` is the old remote workspace.
 4. **Old agent.** If the remote agent still runs (the person asked for the move), ask the person before you close it (`/close` step 5). Do not leave two agents on one task without telling the person.
 5. **Start a local agent** (`/publish` step 7, no `E`) with the prompt plus: "Read the worklog first and continue from the last entry."
