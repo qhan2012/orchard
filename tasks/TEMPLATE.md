@@ -14,6 +14,7 @@ remotes:             # research only: list of "<target>:<absolute path>" to read
 harness:             # full harness commit sha used (from HARNESS at publish time)
 status: planned      # planned | running | blocked | idle | killed | done | closed
 kills: 0
+unreachable: 0       # checks in a row that could not reach the target; written by /check
 check:               # set at runtime, for example "every 10m"; empty = only when asked
 last_checked:
 latest:

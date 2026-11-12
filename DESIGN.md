@@ -280,6 +280,14 @@ Restart after a kill: start the agent again with the same short prompt plus
 "Read the worklog first and continue from the last entry." The plan is in the
 README and the progress is in the worklog, so no session restore is needed.
 
+**A check runs in a subagent.** The `check` skill has `context: fork`. It
+looks, decides, writes the status to the task file, and returns a few lines
+for each task. Its command output never enters the master's context, so a
+`/loop` that checks all night does not fill it. The subagent cannot ask the
+person anything, so it does not act: restart, fallback, and answers to an
+agent are done by the master from the report (`CLAUDE.md`, "After a
+check").
+
 **When and how often to check is decided at runtime**, by the person ("check
 now", "check this task every 10 minutes until done"). A cadence runs as
 `/loop <interval> /check <task>` in the master session. `/loop` stops when the

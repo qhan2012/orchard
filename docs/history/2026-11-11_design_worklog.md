@@ -122,3 +122,10 @@
 - One review: the launch card, the plan, and the directory review were three stops. Now steps 0 to 2 only collect, and step 3 shows one screen and waits once. Step numbers did not change.
 - Task name: must match herdr's agent name rule `[a-z][a-z0-9_-]{0,31}` (v0.8.2 docs), not be `master`, and not exist. Checked in step 0.
 - `docs/first-run.md` step 4: test the guard's `ask` in the master's usual permission mode; if it does not ask, change it to `deny`.
+
+## 17. `/check` runs in a subagent (2026-11-12)
+- Problem: each `/loop` round put the check's command output into the master's context. A night of checks fills it.
+- Change: `check` has `context: fork` (source: https://code.claude.com/docs/en/skills, frontmatter `context`). It looks, decides, writes `status`, `last_checked`, `latest`, `unreachable` to the task file, and returns at most 8 lines for each task. It does not act and does not ask the person.
+- The actions moved to `CLAUDE.md` "After a check", because the master sees only the report, not the skill text: stop the loop, report, answer an idle agent, count kills, restart, `/fallback`.
+- New task field `unreachable` (count in a row), so "stop the loop after 3" survives between rounds.
+- Not verified: that a forked skill can read and write the task files, and how `/loop` shows its result. `docs/first-run.md` step 11 checks it and names the way back (remove `context: fork`).
