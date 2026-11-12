@@ -11,6 +11,8 @@ cp targets.example.yaml targets.yaml     # edit; keep ProxyJump etc. in ~/.ssh/c
 ssh -o BatchMode=yes <host> true         # the master never answers a password prompt
 ```
 
+Workers run without permission prompts by default (`DESIGN.md` 4f). You choose the master's own permission mode when you start `claude`.
+
 Start the master inside herdr, so the master and local workers share one session and herdr tells you when any of them needs you:
 
 ```bash

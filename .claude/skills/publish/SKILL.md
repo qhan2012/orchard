@@ -26,6 +26,7 @@ argument-hint: "<task>"
    Agent:    <agent kind>, runs on <target | local>
    Workspace: <where>:<workdir>/<task>   (reviewed again in step 3)
    Remotes:  <for research: each target and the directories to read>
+   Args:     <agent_args, for example --dangerously-skip-permissions>
    Goal:     <one line>
    ```
    For `research`: read `tasks/*.md` to find the workspaces of the tasks to study. For a closed task, use the local copy in `reports/tasks/<task>/`. Write the list to `remotes:` in the task file.
@@ -83,7 +84,7 @@ argument-hint: "<task>"
    **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (`herdr --session orchard`, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
    After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
    Never run bare `herdr`: it opens the TUI.
-   `agent_args` come from `targets.yaml` (per kind). They set how the agent handles permissions when nobody watches. If none are set for this kind, start without them and tell the person that the agent can stop at approval prompts.
+   **Permissions.** Workers run without permission prompts (the person's decision, `DESIGN.md` 4f), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions`. An `agent_args` entry for the kind in `targets.yaml` replaces the default. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
    For `runner: local`, the master usually runs inside the local `orchard` session, so the server is already running: skip the start. The worker gets its own herdr workspace (`--no-focus`), so the master pane does not change.
 8. **Record.** Set `status: running` in the task file. Add a worklog entry with the task, target, runner, workspace, and harness commit.
    After the worker's first job runs, check that the compute node sees `W` (and `datadir`). Record the result in `memory/target-<target>.md`.
