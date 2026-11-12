@@ -6,6 +6,8 @@ argument-hint: "<task>"
 
 # Publish a task
 
+This skill has all that you need. `DESIGN.md` gives the reasons; do not load it to run a task.
+
 `E` is the target's `enter` command. Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules). With `runner: herdr`, the workspace is on the target: put `E` in front of each workspace command. With `runner: local`, the workspace is local: run the commands as they are.
 
 `W` is the workspace directory: `<workdir>/<task>`. `<workdir>` is the target's `workdir` in `targets.yaml`. The default is `~/myworks`. The last part of `<workdir>` is always `myworks`.
@@ -23,7 +25,7 @@ argument-hint: "<task>"
    **Task name.** It is also the herdr agent name, so it must match `[a-z][a-z0-9_-]{0,31}`: a lowercase letter first, then lowercase letters, digits, `_`, or `-`, 32 characters at most. It must not be `master`, and no `tasks/<task>.md` may exist. If the person's name does not fit, propose one that does.
    **Agent kind** (herdr `--kind`: `claude`, `codex`, `cursor`, ...). Take the first that applies: (1) what the person said in the request; (2) `agent` of the place where the agent runs, in `targets.yaml` (the target, or the `local` entry for `runner: local` and `research`); (3) `claude`. Write it to `agent:` in the task file.
    **Input files.** The person puts files for a new task in `files/` (the inbox). Use the files that the person names. If they name none and `files/` is not empty, list what is there and ask which belong to this task. Do not guess, and do not take files that they did not name. Do not move anything yet.
-   Prepare the launch card. It is part of the review screen in step 3:
+   Prepare the launch card. It is part of the review screen in step 3. Leave out a line that has no value (`Remotes`, `Files`, `From`, `Then`, `Check`):
    ```
    Task:     <task>
    Kind:     experiment | research
@@ -41,7 +43,8 @@ argument-hint: "<task>"
 1. **Plan.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Fill the header and the plan.
    Write **what** and **when it is done**: goal, success criteria, verifier, scope boundary, constraints. Do not write how. The worker researches how as its first step (the harness rule "Research prerequisites first"), and it does not stop after that research: it goes on with the task.
    If you must learn something before you can write the plan (which target, what a fair criterion is), do not research it yourself. Send a subagent. It writes its findings and sources to `tasks/<task>/plan-notes.md` and returns a few lines. Then go on to the review screen without a stop.
-   If the research before the task needs hours, publish a `research` task with a follow-up (see "Follow-up" below). For `kind: experiment`, add these two lines to the plan Constraints:
+   If the research before the task needs hours, publish a `research` task with a follow-up (see "Follow-up" below).
+   For `kind: experiment`, add these two lines to the plan Constraints:
    - "Give every scheduler job a name that starts with `<task>-`."
    - "Cancel your jobs before you write the summary."
    If the target has a `datadir`, add: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
@@ -51,7 +54,7 @@ argument-hint: "<task>"
    **Check the agent CLI** where the agent will run: `command -v <cli>` (`claude` → `claude`, `codex` → `codex`, `cursor` → `cursor-agent`). Login cannot be checked the same way for every CLI: if `memory/target-<name>.md` does not say that this kind is logged in there, ask the person, then record the answer. If the CLI is missing or not logged in, stop and tell the person. Do not change to another kind yourself.
    **Check the account** where the agent will run: `id -u`. If it is `0` (root) and the `agent_args` have `--dangerously-skip-permissions`, stop and tell the person: Claude Code is expected to refuse that flag as root. Do not start the agent to find out.
    Run `herdr --version` where the agent will run. The skills are checked against herdr 0.8.2 (memory `herdr-cli-facts`). If the version is different, check each herdr command below against that version's `cli-reference` first, and record the version in `memory/target-<target>.md`.
-3. **Review with the person: one screen, one answer** (`DESIGN.md` 4a). Do this for every new workspace. First collect the disk facts, on the side where the workspace will be (and for the remote work directory with `runner: local`).
+3. **Review with the person: one screen, one answer.** Do this for every new workspace. First collect the disk facts, on the side where the workspace will be (and for the remote work directory with `runner: local`).
    ```bash
    df -h ~ <workdir> 2>&1            # home and the workdir filesystem
    quota -s 2>/dev/null              # can be empty; shared filesystems need a site command
@@ -69,7 +72,7 @@ argument-hint: "<task>"
    Wait for the person's answer. One "yes" accepts the card, the plan, and the directory. If they change one part, show only that part again. Do not make the directory before they agree. If they say no to the task, delete the draft `tasks/<task>.md`. The input files are still in `files/`.
    Home must keep free space in every case: the agent and herdr write their state under home.
    **First use of a target** (no `workdir` in `targets.yaml`): also ask what commands cannot show: the quota command for shared filesystems, the file-count quota, the purge policy, and if compute nodes see the same path. Write the choice to `targets.yaml` (`workdir`, optional `datadir`) and the reasons to `memory/target-<target>.md`. For a new disk: `mkdir -p <workdir> && chmod 700 <workdir>`.
-4. **Make the workspace** (`DESIGN.md` 4b). First move the task's input files out of the inbox: `mkdir tasks/<task> && mv files/<name> ... tasks/<task>/`. Write their names to `files:` in the task file. Then read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.
+4. **Make the workspace.** First move the task's input files out of the inbox: `mkdir -p tasks/<task> && mv files/<name> ... tasks/<task>/` (the directory can exist already, with `plan-notes.md`). Write their names to `files:` in the task file. Then read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.
    ```bash
    test -e W && echo EXISTS     # EXISTS: stop and tell the person
    git init -q W
@@ -82,7 +85,7 @@ argument-hint: "<task>"
    Fetch by commit needs the full 40-character sha. Do not use the latest main: a new harness version comes only through a change to `HARNESS`.
    With `runner: local` and `kind: experiment`, also make the remote work directory: `E 'test -e <remote W> && echo EXISTS || mkdir -p <remote W>'`. A `research` task makes nothing on a remote.
    Write the absolute path of `W` to `workspace:` (and `remote_dir:`) in the task file.
-5. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local` and `kind: experiment`, add the `### Remote` block (`DESIGN.md` 4). For `kind: research`, add the `### Remotes (read-only)` block (`DESIGN.md` 4e).
+5. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local` and `kind: experiment`, add the `### Remote` block. For `kind: research`, add the `### Remotes (read-only)` block. Both block texts are in `blocks.md`, next to this file.
    To write a remote file: `E 'cat > W/README.md' < local-copy`.
    **Send the input files.** Copy `tasks/<task>/` into the workspace `files/` directory (the harness has it for this): on a target, `tar -C tasks/<task> -cf - . | E 'tar -C W/files -xf -'`; locally, the same without `E`. The copy in `tasks/<task>/` stays as the master's record. Add one line to the plan Constraints: "Input files are in `files/`: <names>."
 6. **Seed memory.** If `memory/target-<target>.md` exists here (for `research`: one per target in `remotes`), copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`. The harness copy has no `MEMORY.md`: make it first, with the heading `# Memory index`.
@@ -99,7 +102,7 @@ argument-hint: "<task>"
    **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (`herdr --session orchard`, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
    After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
    Never run bare `herdr`: it opens the TUI.
-   **Permissions.** Workers run without permission prompts (the person's decision, `DESIGN.md` 4f), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions`. An `agent_args` entry for the kind in `targets.yaml` replaces the default. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
+   **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions`. An `agent_args` entry for the kind in `targets.yaml` replaces the default. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
    For `runner: local`, the master usually runs inside the local `orchard` session, so the server is already running: skip the start. The worker gets its own herdr workspace (`--no-focus`), so the master pane does not change.
 8. **Record.** Set `status: running` in the task file. If the review set a check cadence, write it to `check:` and start the `/loop`. Add a worklog entry with the task, target, runner, workspace, and harness commit.
    After the worker's first job runs, check that the compute node sees `W` (and `datadir`). Record the result in `memory/target-<target>.md`.
@@ -113,7 +116,7 @@ Use this when the person wants a `research` task to lead straight into an `exper
 Add to the research plan Constraints: "End the summary with a section `## Proposed task`: goal, success criteria, verifier, scope boundary, constraints for the follow-up experiment on `<target>`. Stay inside these limits: <the limits the person gave>. If the experiment is not worth doing, or needs something outside the limits, say so in that section."
 
 **When a check reports the research `done`** (`CLAUDE.md`, "After a check"), publish the follow-up at once:
-- Task name: the research task name plus `-run` (it must still fit the name rule). Set `from: <research task>`.
+- Task name: the research task name plus `-run`. Check at the research task's review that this name fits the name rule (so the research name has 28 characters at most) and is free. Set `from: <research task>`.
 - The plan is the `## Proposed task` section, as written. Input files: the research summary, copied to the follow-up's `files/`.
 - Do steps 2 and 4 to 8 as usual. Step 3: show the review screen to the person as a message, and **do not wait**.
 - Then clear `then:` in the research task file, so it cannot start twice. Tell the person in one message: research result, and that the follow-up runs.

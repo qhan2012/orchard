@@ -20,7 +20,7 @@ For each task, read `tasks/<task>.md`. `S` is its `session`, `A` is its `agent_n
    - The server answers and `A` is not in the list: the agent is gone. Run `agent list` a second time to confirm.
    When the target is reachable, set `unreachable: 0`.
 2. **Harness files.** In the workspace directory: `ls W/reports/` and `tail -n 30 W/reports/*_worklog.md`. An adopted task can have no harness files. Then use the agent state and its screen only: `idle` or `done` in herdr means "finished a turn", and you report it as `idle`; only the person says that such a task is done.
-3. **Decide the status** (`DESIGN.md` 5). Take the first that fits:
+3. **Decide the status.** Take the first that fits:
    - a `reports/*_summary.md` exists and the agent is not `working`: `done`
    - a summary exists and the agent is `working`: `running` (the person gave it more work after `done`)
    - herdr says `blocked`, or the worklog has a new `BLOCKER:`: `blocked`
