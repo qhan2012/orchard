@@ -6,9 +6,12 @@ Run this before you rely on orchard for a long run, and after you change `src/`.
 |---|---|---|---|
 | 0 | SSH works without a prompt | `ssh -o BatchMode=yes <head> true` | exit 0 |
 | 1 | Inventory parses | `orchardctl inventory` | your clusters and nodes are listed |
+| 1a | Target reachable | `orchardctl check <node or cluster>` | `reachable: true`; `gpu`, `herdr`, `agent_*` show what is installed |
+| 1b | exec works | `orchardctl exec <target> -- 'hostname && whoami'` | `rc: 0`, the right host and user |
 | 2 | Slurm reachable | `orchardctl slurm <c> queue` | JSON list (can be empty) |
 | 3 | herdr exists on compute | `orchardctl slurm <c> submit` a script that runs `herdr --version`, then `status` | job COMPLETED. The output file shows a version |
 | 4 | Launch herdr in a job | `orchardctl slurm <c> launch-herdr --opt time=00:20:00 --wait 600` | `job.state == RUNNING` |
+| 4a | exec inside the job | `orchardctl exec <c> --job <id> -- hostname` | a compute node name, not the head |
 | 5 | Reach it with srun | `orchardctl herdr --cluster <c> --job <id> status` | server status JSON |
 | 6 | Start an agent | `orchardctl herdr --cluster <c> --job <id> start smoke --kind claude --cwd '~'` | `pane_id` returned |
 | 7 | Prompt and read | `prompt smoke "Reply with the word ready." --timeout-ms 120000`, then `read smoke` | the text contains `ready` |

@@ -5,9 +5,10 @@ Transport. This keeps the control plane small and easy to audit.
 
 - SSHTransport  runs on a host through the system OpenSSH client, so
   ~/.ssh/config (ProxyJump, ControlMaster, keys, ssh-agent) applies unchanged.
-- SrunTransport runs inside a running Slurm job, through the cluster head:
-  head$ srun --jobid=<id> --overlap ... bash -lc '<cmd>'
-  This needs no SSH access to compute nodes.
+- JobTransport  runs inside a running scheduler job, through the head/jumper:
+  head$ srun --jobid=<id> --overlap ... bash -lc '<cmd>'   (Slurm default)
+  The enter-the-job command is a template, so a Slurm-like scheduler works
+  too. This needs no SSH access to compute nodes.
 """
 
 from __future__ import annotations
@@ -86,22 +87,29 @@ class SSHTransport:
         return Result(self.name, cmd, p.returncode, p.stdout, p.stderr)
 
 
+SLURM_JOB_EXEC = "srun --jobid={job} --overlap --nodes=1 --ntasks=1 bash -lc {cmd}"
+
+
 @dataclass
-class SrunTransport:
+class JobTransport:
+    """Runs a command inside a running scheduler job, through the head/jumper.
+
+    ``template`` is the head-side command that enters the job. Placeholders:
+    {job} (job id) and {cmd} (the inner command). Both are shell-quoted.
+    The Slurm default needs Slurm >= 20.11 for --overlap. A Slurm-like
+    in-house scheduler sets its own template in inventory.yaml (job_exec).
+    """
+
     head: Transport
     job_id: str
+    template: str = SLURM_JOB_EXEC
 
     @property
     def name(self) -> str:
         return f"{self.head.name}/job:{self.job_id}"
 
     def wrap(self, cmd: str) -> str:
-        # --overlap (Slurm >= 20.11) shares the job's resources with the
-        # already-running step instead of waiting for free resources.
-        return (
-            f"srun --jobid={shlex.quote(self.job_id)} --overlap --nodes=1 --ntasks=1 "
-            f"bash -lc {shlex.quote(cmd)}"
-        )
+        return self.template.format(job=shlex.quote(self.job_id), cmd=shlex.quote(cmd))
 
     def run(self, cmd: str, input: str | None = None, timeout: float | None = None) -> Result:
         r = self.head.run(self.wrap(cmd), input=input, timeout=timeout)

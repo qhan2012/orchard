@@ -4,6 +4,7 @@ description: Slurm is reached only through the head node; ownership tag rule
 type: project
 ---
 - The local machine has no Slurm (user statement, 2026-11-09). All Slurm CLI commands run on the head node over SSH.
-- To reach a running job without SSH to a compute node, run `srun --jobid=J --overlap` on the head node. This needs Slurm 20.11 or later.
+- To reach a running job without SSH to a compute node, run `srun --jobid=J --overlap` on the head node. This needs Slurm 20.11 or later. The command is the cluster's `job_exec` template, so an in-house Slurm-like tool sets its own.
+- Some clusters are reached through a jumper that can only run scheduler commands (no agents, no herdr). Others' jumpers can run agents (user statement, 2026-11-11).
 - orchard tags its jobs with `--comment=orchard:<tag>`. cancel acts only on tagged jobs in `squeue --me`.
 - Match rows by job id. Never trust the row order. (A smoke-test shim showed that a row-0 assumption cancels the wrong job.)

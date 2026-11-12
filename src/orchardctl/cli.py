@@ -9,6 +9,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
+import shlex
 import sys
 import uuid
 from pathlib import Path
@@ -16,17 +18,25 @@ from typing import Any
 
 from . import inventory as inv_mod
 from .herdr import HerdrClient
-from .slurm import SlurmAdapter, check_job_id, herdr_job_script
-from .transport import SrunTransport
+from .slurm import SlurmAdapter, herdr_job_script
+from .transport import JobTransport, Transport
 
-NODE_PROBE = (
+PROBE = (
     "echo host=$(hostname); echo user=$(whoami); "
     "echo load=\"$(cut -d' ' -f1-3 /proc/loadavg)\"; echo cpus=$(nproc); "
     "echo mem_mb=$(free -m | awk '/^Mem:/{print $2\"/\"$7\" total/avail\"}'); "
-    "(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total "
-    "--format=csv,noheader | sed 's/^/gpu=/') || echo gpu=none; "
-    "echo herdr=$(command -v herdr || echo missing)"
+    "if command -v rocm-smi >/dev/null; then rocm-smi --showuse --showmemuse --csv 2>/dev/null "
+    "| grep -i '^card' | sed 's/^/gpu=/'; "
+    "elif command -v nvidia-smi >/dev/null; then nvidia-smi --query-gpu=index,name,utilization.gpu,"
+    "memory.used,memory.total --format=csv,noheader | sed 's/^/gpu=/'; else echo gpu=none; fi; "
+    "echo herdr=$(command -v herdr || echo missing); "
+    "for a in claude codex opencode; do echo agent_$a=$(command -v $a || echo missing); done; "
+    "for s in sbatch srun squeue; do command -v $s >/dev/null && echo sched_$s=$(command -v $s); done; true"
 )
+
+# Job ids: Slurm uses 123 or 123_4; a Slurm-like tool may differ. The id is
+# always shell-quoted; this only rejects obvious garbage early.
+_JOB_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 
 
 def _kv(lines: str) -> dict[str, Any]:
@@ -48,13 +58,29 @@ def _opts(pairs: list[str] | None) -> dict[str, str]:
     return out
 
 
+def _job_id(job: str) -> str:
+    if not _JOB_ID.match(job):
+        raise ValueError(f"bad job id {job!r}")
+    return job
+
+
+def _transport(inv: inv_mod.Inventory, name: str, job: str | None = None) -> Transport:
+    """Where a command runs: a node; a cluster's head/jumper; or inside a job via the head."""
+    t = inv.target(name)
+    if job is None:
+        return t.transport()
+    if not isinstance(t, inv_mod.Cluster):
+        raise ValueError(f"--job needs a cluster; {name!r} is a node")
+    return JobTransport(t.transport(), _job_id(job), t.job_exec)
+
+
 def _herdr(inv: inv_mod.Inventory, a: argparse.Namespace) -> HerdrClient:
     if a.node:
         t = inv.node(a.node).transport()
-    elif a.cluster and a.job:
-        t = SrunTransport(inv.cluster(a.cluster).transport(), check_job_id(a.job))
+    elif a.cluster:  # with --job: inside the job; without: on the head/jumper
+        t = _transport(inv, inv.cluster(a.cluster).name, a.job)
     else:
-        raise SystemExit("herdr target: give --node NAME, or --cluster NAME --job ID")
+        raise SystemExit("herdr target: give --node NAME, or --cluster NAME [--job ID]")
     return HerdrClient(t, session=a.session or inv.herdr_session, binary=inv.herdr_binary)
 
 
@@ -69,12 +95,28 @@ def run(a: argparse.Namespace) -> Any:
             "herdr": {"session": inv.herdr_session, "binary": inv.herdr_binary},
         }
 
-    if a.cmd == "node":
-        r = inv.node(a.name).transport().run(NODE_PROBE, timeout=a.timeout)
-        return {"node": a.name, "reachable": r.ok, **(_kv(r.stdout) if r.ok else {"stderr": r.stderr.strip()})}
+    if a.cmd == "check":
+        t = _transport(inv, a.target, a.job)
+        r = t.run(PROBE, timeout=a.timeout)
+        out = {"target": a.target, "where": t.name, "reachable": r.ok}
+        return {**out, **(_kv(r.stdout) if r.ok else {"rc": r.returncode, "stderr": r.stderr.strip()})}
+
+    if a.cmd == "exec":
+        argv = a.command[1:] if a.command[:1] == ["--"] else a.command
+        if not argv:
+            raise SystemExit("exec: give a command after --")
+        # One argument is a shell string (pipes, &&, globs work); several are quoted as argv.
+        cmd = argv[0] if len(argv) == 1 else shlex.join(argv)
+        t = _transport(inv, a.target, a.job)
+        r = t.run(cmd, timeout=a.timeout)
+        return {"target": a.target, "where": t.name, "cmd": cmd, "rc": r.returncode,
+                "stdout": r.stdout, "stderr": r.stderr}
 
     if a.cmd == "slurm":
         c = inv.cluster(a.cluster)
+        if c.scheduler != "slurm":
+            raise SystemExit(f"cluster {c.name!r} uses scheduler {c.scheduler!r}; "
+                             "slurm commands are not available there yet")
         s = SlurmAdapter(c.transport(), c.sbatch_defaults)
         if a.action == "queue":
             return [j.to_dict() for j in s.queue()]
@@ -134,9 +176,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("inventory", help="show the parsed inventory")
 
-    n = sub.add_parser("node", help="probe an SSH node (load, mem, GPU, herdr)")
-    n.add_argument("name")
-    n.add_argument("--timeout", type=float, default=30)
+    ck = sub.add_parser("check", help="probe a target: reachable, load, mem, GPU, herdr, agents, scheduler")
+    ck.add_argument("target", help="node name, or cluster name (its head/jumper)")
+    ck.add_argument("--job", help="probe inside this running job (cluster only)")
+    ck.add_argument("--timeout", type=float, default=60)
+
+    ex = sub.add_parser("exec", help="run one command on a target; JSON with rc/stdout/stderr")
+    ex.add_argument("target", help="node name, or cluster name (its head/jumper)")
+    ex.add_argument("--job", help="run inside this running job (cluster only)")
+    ex.add_argument("--timeout", type=float, help="seconds; rc 124 on timeout")
+    ex.add_argument("command", nargs="*",
+                    help="put it after --: one shell string, or argv words")
 
     s = sub.add_parser("slurm", help="Slurm on a cluster head, over SSH")
     s.add_argument("cluster")
@@ -154,7 +204,7 @@ def build_parser() -> argparse.ArgumentParser:
     lh.add_argument("--opt", action="append", metavar="KEY=VALUE")
     lh.add_argument("--wait", type=float, metavar="SECONDS", help="wait until RUNNING")
 
-    h = sub.add_parser("herdr", help="control herdr on a node or inside a Slurm job")
+    h = sub.add_parser("herdr", help="control herdr on a node, a cluster head/jumper, or inside a job")
     h.add_argument("--node"); h.add_argument("--cluster"); h.add_argument("--job")
     h.add_argument("--session", help="herdr session (default from inventory)")
     hs = h.add_subparsers(dest="action", required=True)

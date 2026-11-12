@@ -2,14 +2,14 @@
 
 Orchestration for agents: a light control plane for a **master agent**. The master runs on your local machine. It can:
 
-- check SSH nodes (load, memory, GPU, herdr),
+- run one command on any target and check it (`exec`, `check`): a direct SSH node, a cluster head/jumper, or inside a running job,
 - submit and manage Slurm jobs. The local machine has no Slurm, so every Slurm command runs on the cluster **head node** over SSH,
 - start and control [herdr](https://github.com/ogulcancelik/herdr) sessions on a plain node or inside a Slurm job.
 
 ```
 local (master agent) ──ssh──► head node ── sbatch / squeue / sacct / scancel
         │                         │
-        │                         └─ srun --jobid=J --overlap ─► compute node: herdr server + agents
+        │                         └─ job_exec (srun --jobid=J --overlap, or an in-house tool) ─► compute node
         └──ssh──► plain node ─► herdr server + agents
 ```
 
@@ -23,7 +23,10 @@ cp inventory.example.yaml inventory.yaml      # edit hosts; keep ProxyJump etc. 
 ssh -o BatchMode=yes <head> true              # orchard never prompts for a password
 pytest -q                                     # offline tests (fake transport)
 
-orchardctl node box1
+orchardctl check box1                          # direct node: load, mem, GPU (rocm-smi/nvidia-smi), herdr, agents
+orchardctl check hpc1                          # the head/jumper itself
+orchardctl exec box1 -- nproc                  # JSON: rc, stdout, stderr
+orchardctl exec corp --job <id> -- 'cd ~/proj && git status'   # inside a job; quote pipes and &&
 orchardctl slurm hpc1 queue
 orchardctl slurm hpc1 launch-herdr --opt time=02:00:00 --wait 600   # -> job_id
 orchardctl herdr --cluster hpc1 --job <id> start rev --kind claude --cwd '~/proj'
@@ -32,6 +35,8 @@ orchardctl herdr --cluster hpc1 --job <id> read rev --lines 200
 orchardctl slurm hpc1 cancel <id>
 ```
 
+`exec` puts the remote exit code in `rc` and still exits 0, because orchard itself worked. One argument after `--` is a shell string that runs on the target (`$VAR`, `|`, `&&` expand there). Several arguments are quoted word by word.
+
 Every command prints JSON on stdout. On an error, it prints `{"error", "message"}` on stderr and exits with code 1. See `runbooks/` for the standard procedures.
 
 ## Layout
@@ -39,7 +44,7 @@ Every command prints JSON on stdout. On an error, it prints `{"error", "message"
 ```
 .
 ├── src/orchardctl/
-│   ├── transport.py   # SSHTransport (system OpenSSH), SrunTransport (into a running job via head)
+│   ├── transport.py   # SSHTransport (system OpenSSH), JobTransport (into a running job via head, job_exec template)
 │   ├── inventory.py   # load + check inventory.yaml
 │   ├── slurm.py       # SlurmAdapter: submit / queue / job / cancel / wait_running; ownership tag
 │   ├── herdr.py       # HerdrClient: server up/down/status, agents, start, prompt, wait, read, keys
@@ -65,7 +70,7 @@ Every command prints JSON on stdout. On an error, it prints `{"error", "message"
 **Verifier.** `pytest -q` (offline). `runbooks/smoke-test.md` on a real head node (online).
 
 **Scope boundary.**
-- In scope: SSH nodes, Slurm through the head node, herdr CLI control.
+- In scope: SSH nodes, Slurm through the head node, a Slurm-like in-house scheduler (enter-a-job only, via `job_exec`), herdr CLI control.
 - Out of scope for v0.1: other schedulers (PBS, LSF, K8s), a long-running daemon, a web UI, installing herdr on targets, and changing cluster configuration.
 
 **Constraints.**

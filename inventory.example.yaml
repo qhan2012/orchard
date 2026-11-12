@@ -13,6 +13,13 @@ clusters:
       partition: gpu
       time: "04:00:00"
       gres: "gpu:1"
+    # job_exec defaults to: srun --jobid={job} --overlap --nodes=1 --ntasks=1 bash -lc {cmd}
+
+  corp:
+    head: corp-jumper         # jumper with an in-house, Slurm-like scheduler
+    scheduler: custom         # no slurm subcommands here yet; exec/check/herdr work
+    # Head-side command that runs {cmd} inside running job {job}. Both are shell-quoted.
+    job_exec: "myrun --job {job} -- bash -lc {cmd}"
 
 nodes:
   box1:
