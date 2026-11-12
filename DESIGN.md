@@ -56,7 +56,7 @@ runner: local
 agent: claude
 workspace: local:~/myworks/moe-nan-debug   # where the harness is
 remote_dir: ~/myworks/moe-nan-debug        # runner: local only
-harness: 1cc55ca                           # harness commit used
+harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
 status: running        # planned | running | blocked | idle | killed | done
 kills: 0
 check: every 10m       # set at runtime; empty = only when asked
@@ -74,14 +74,25 @@ everything is.
 ### 4a. Make the workspace
 
 The workspace is a copy of `qhan2012/harness` at `~/myworks/<task>/`, on the
-side where the agent runs.
+side where the agent runs. The harness version is pinned in the `HARNESS`
+file (repo URL and full commit sha), not the latest main. So all tasks in a
+batch get the same rules, and an upgrade is a one-line PR that a person
+reviews.
 
 ```bash
 test -e ~/myworks/<task> && echo EXISTS      # if it exists: stop, tell the person
-git clone --depth 1 https://github.com/qhan2012/harness ~/myworks/<task>
-git -C ~/myworks/<task> rev-parse --short HEAD   # record in the task file
+git init -q ~/myworks/<task>
+git -C ~/myworks/<task> fetch -q --depth 1 <url> <sha>   # from HARNESS
+git -C ~/myworks/<task> checkout -q FETCH_HEAD
+git -C ~/myworks/<task> rev-parse HEAD       # must equal <sha>; record in the task file
 rm -rf ~/myworks/<task>/.git                 # so nothing is pushed to qhan2012/harness
 ```
+
+`HARNESS` also records which harness commit orchard's own `CLAUDE.md` is
+based on, so a harness upgrade shows which master rules to sync.
+
+Not used: a git submodule (orchard needs no harness files locally) or a
+vendored copy (a second copy that drifts, and must be sent to the remote).
 
 Code repos for the task go in `codebases/`, as the harness says.
 
@@ -175,6 +186,7 @@ local agent that continues. It also sets the machine's default `runner` to
 ```
 orchard/
 ├── DESIGN.md
+├── HARNESS               # pinned harness repo + commit for task workspaces
 ├── CLAUDE.md             # master rules
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
@@ -211,4 +223,5 @@ budgets, automatic memory search. Add one only when a real need shows up.
 - herdr inside a scheduler job (agent on a compute node). Today the agent
   runs on the `enter` machine or locally, and uses the scheduler from there.
 - The real `job_exec` command of the in-house scheduler.
+- herdr version: the skills are checked against herdr 0.8.2 (source and docs at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
 - Nothing here is verified on a real machine yet.
