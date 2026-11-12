@@ -1,6 +1,6 @@
 ---
 task:                # short, unique, kebab-case; also the workspace directory name
-target:              # a name from targets.yaml
+target:              # a name from targets.yaml; `local` for an adopted agent on this machine
 runner:              # herdr | local (default: the target's runner)
 agent: claude        # agent kind
 started_by: orchard  # orchard | person (adopted with /adopt)

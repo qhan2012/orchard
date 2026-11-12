@@ -21,8 +21,8 @@ The person started the agent. The person's request to adopt it is their consent 
    - Not found: `/check` uses the herdr state and the screen only. Do not add harness files unless the person asks.
 5. **Write the task file.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Set:
    - `started_by: person`, `session`, `agent_name`, `agent` (kind from `agent list`)
-   - `target` (or `local`), `runner` (`herdr` if on a target, `local` if on this machine), `workspace: <target>:<cwd>`
+   - `target` (or `local`), `runner` (`herdr` if on a target, `local` if on this machine), `workspace: <target>:<cwd>` (absolute path)
    - `harness`: empty, or what the workspace says if it is a harness copy
-   - `status` from step 1-2, `kills: 0`, `last_checked`, `latest`
+   - `status` from steps 1 and 2, `kills: 0`, `last_checked`, `latest`
    - Plan section: the person's goal in their words, plus one line on what the screen shows.
 6. **Record.** Add a worklog entry: task, where, session, agent name, pane id, and the commands you ran. Ask the person if they want a check cadence (`/loop <interval> /check <task>`).

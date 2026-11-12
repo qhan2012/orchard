@@ -12,9 +12,9 @@ For a task with `started_by: person`: do steps 2 to 4 only, then set `status: cl
 
 `E` is the target's `enter` command (none for a local agent). `S` is the task's `session`, `A` its `agent_name`, `W` its workspace path.
 
-1. **Record the session id.** `E herdr --session S agent get A`. If the reply has `agent_session`, write its id to `agent_session:` in the task file. With it, the conversation can be resumed later (`claude --resume <id>` in `W`). If it is absent, tell the person that the agent's conversation ends with the close.
-2. **Check leftover jobs.** On a target with a scheduler, list the person's jobs whose name starts with `<task>-` (Slurm: `squeue --me --name` does not match a prefix, so use `squeue --me --format='%i %j %T' | grep ' <task>-'`). If any is left, show it and ask. Do not cancel it yourself.
-3. **Copy the record back.** `E 'tar -C W -cf - README.md MEMORY.md memory reports' | tar -C reports/tasks/<task> -xf -` (make `reports/tasks/<task>/` first). With `runner: local` the files are already local: skip.
+1. **Record the session id.** `E herdr --session S agent get A`. If the reply has `agent_session`, write its id to `agent_session:` in the task file. With it, the conversation can be resumed later (for example `claude --resume <id>` in `W`). If it is absent, tell the person that the agent's conversation ends with the close.
+2. **Check leftover jobs.** On a target with a scheduler, list the person's jobs whose name starts with `<task>-` (Slurm: `squeue --me --name` does not match a prefix, so use `squeue --me --format='%i %j %T' | grep ' <task>-'`). If any is left, show it and ask. Do not cancel it yourself. Another scheduler is not covered yet: tell the person to check.
+3. **Copy the record back.** `E 'tar -C W -cf - README.md MEMORY.md memory reports' | tar -C reports/tasks/<task> -xf -` (make `reports/tasks/<task>/` first; copy only the items that exist). With `runner: local` the files are already local: skip.
 4. **Collect memory.** Read the task `MEMORY.md`. Move only lessons that hold across tasks into master memory (mostly `memory/target-<target>.md`), each with `(verified date, task <task>)`.
 5. **Close the worker.** `E herdr --session S agent get A` gives its `workspace_id`. Then `E herdr --session S workspace close <workspace_id>`. Check with `agent list` that only this agent is gone. Never close the workspace of `master`.
 6. **Record.** Set `status: closed` in the task file. Add a worklog entry. Keep the directory `W` unless the person says to remove it.
