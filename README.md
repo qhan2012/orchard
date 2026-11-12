@@ -24,6 +24,7 @@ Then tell the master what to do. Start the request with the kind ("Experiment on
 
 - "Experiment on `box1`: find why the MoE run gives NaN. Use `files/run.log` and `files/config.yaml`." → `/publish`, kind `experiment`. Put a task's input files in `files/` first; the master moves them to `tasks/<task>/` and copies them to the worker
 - "Research: compare the MoE runs on `corp` and `box1`, search for known causes, write a report." → `/publish`, kind `research` (local agent, reads the targets, web search)
+- "Research why the MoE runs give NaN, then run the fix on `box1`. Check every 15 minutes." → a `research` task with a follow-up `experiment`. You approve both at one review; the experiment starts by itself when the research is done
 - "Check all tasks." → `/check`
 - "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
 - "Close `moe-nan-debug`." → `/close`

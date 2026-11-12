@@ -77,6 +77,8 @@ agent_session:         # native session id, written at close
 workspace: local:/home/qh/myworks/moe-nan-debug   # where the harness is (absolute path)
 remote_dir: /proj/qh/myworks/moe-nan-debug        # runner: local only
 harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
+from:                  # research task that this task follows (4e)
+then:                  # research only: follow-up approved in advance (4e)
 status: running        # planned | running | blocked | idle | killed | done | closed
 kills: 0
 unreachable: 0         # unreachable checks in a row
@@ -190,6 +192,24 @@ the plan:
 A new experiment that the research asks for is a separate `experiment`
 task. The person decides, and the master publishes it. So analysis and
 changes to remote state stay in different agents.
+
+**Research before a task does not stop the flow.** Three cases:
+- Research that is part of the task (how to do it): the worker does it
+  first and goes on. The master's plan says what and when it is done, not
+  how.
+- Facts that the master needs to write the plan: a subagent finds them,
+  writes `tasks/<task>/plan-notes.md`, and the master goes on to the review.
+- Hours of research first: a `research` task with a follow-up. At the
+  research task's review, the person also approves the follow-up
+  experiment (target, agent, args, directory, limits). The research summary
+  ends with a `## Proposed task` section. When a check sees `done`, the
+  master publishes the follow-up at once, shows the person what it did, and
+  does not wait. It stops and waits only if the proposal is missing, says
+  not to do it, goes outside the approved limits, or a check fails.
+
+  The follow-up starts when a check runs, so such a task needs a check
+  cadence. This is the one case where a workspace is made without a new
+  answer from the person; the answer was given in advance.
 
 To start the right kind, the master does not guess. If the request does not
 say the kind, it asks. The launch card (task, kind, where the agent runs,
