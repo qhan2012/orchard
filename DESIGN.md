@@ -13,8 +13,9 @@ the person started by hand.
 ## 1. No code (one exception: section 10)
 
 The master is an agent. It can run `ssh` and `herdr` itself. So orchard is a
-harness repo, not a program: a machine list, a task directory, five Claude
-Code skills (`/publish`, `/check`, `/close`, `/fallback`, `/adopt`), and
+harness repo, not a program: a machine list, a task directory, six Claude
+Code skills (`/publish`, `/check`, `/close`, `/fallback`, `/adopt`,
+`/backup`), and
 `CLAUDE.md`. Skills load only when used, so `CLAUDE.md` stays short. Add a
 script only when the same command fails again and again.
 
@@ -358,7 +359,7 @@ orchard/
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
-├── .claude/skills/       # publish, check, close, fallback, adopt
+├── .claude/skills/       # publish, check, close, fallback, adopt, backup
 ├── .claude/hooks/        # guard.py: three hard rules (section 10)
 ├── memory/ + MEMORY.md   # target-*.md are gitignored
 ├── reports/              # gitignored: worklogs; tasks/<task>/ = records copied back at close
@@ -381,6 +382,19 @@ Base: the harness memory (`memory/<name>.md` with frontmatter, index in
      machine from the start.
    - *Up, at close*: read the task `MEMORY.md`. Move only lessons that hold
      across tasks into master memory (mostly into `target-<name>.md`).
+
+## 8a. Backup of the site data
+
+The site data (`targets.yaml`, task files, machine memory, reports) is
+gitignored here. The person can give, at runtime, a subfolder of a private
+GitHub repo. `/backup` copies the site data there, commits, and pushes. The
+location is in the gitignored file `backup.local`.
+
+- The master checks that the repo is private and is not this public repo.
+- A backup runs after publish, adopt, close, and fallback, and on request.
+  It does not run after each check.
+- A backup never removes files, and a restore never overwrites files. So a
+  mistake on one side does not destroy the other side.
 
 ## 9. Not in scope
 
@@ -433,4 +447,5 @@ does not apply to workers.
 - `/loop` ends with the master session. The master offers to start loops
   again at the start of a session.
 - A local-runner agent edits remote code through SSH only.
-- Site data is gitignored (public repo), so it has no git backup.
+- Site data is gitignored (public repo). It has a backup only after the
+  person gives a location (section 8a).

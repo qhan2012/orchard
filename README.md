@@ -2,7 +2,7 @@
 
 A harness for a **master agent**. The master runs on your local machine. It plans, publishes, monitors, and closes tasks. Each task runs in a coding agent inside [herdr](https://github.com/ogulcancelik/herdr) on a remote machine, in a workspace made from [qhan2012/harness](https://github.com/qhan2012/harness). If a remote machine often kills agents, the agent runs locally and works on the remote through SSH.
 
-There is no program here. The master uses `ssh` and `herdr` directly and follows five Claude Code skills. Read `DESIGN.md` for the full design.
+There is no program here. The master uses `ssh` and `herdr` directly and follows six Claude Code skills. Read `DESIGN.md` for the full design.
 
 ## Quick start
 
@@ -43,7 +43,7 @@ Many small questions fill the master's context, mostly with command output. The 
 | A new topic, or a long session | `/clear`. Nothing is lost. The master then offers to start your `/loop` checks again |
 | Not about orchard | A different Claude Code session, not the master |
 
-This repo is public. Your machine list, task files, machine memory, and reports are gitignored and stay on your machine. Run one master session per checkout.
+This repo is public. Your machine list, task files, machine memory, and reports are gitignored and stay on your machine. To back them up, give the master a subfolder of a private repo: "Back up to `<clone path or repo URL>` `<subfolder>`" (`/backup`). Run one master session per checkout.
 
 ## Layout
 
@@ -54,7 +54,7 @@ This repo is public. Your machine list, task files, machine memory, and reports 
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
-├── .claude/skills/       # publish, check, close, fallback, adopt (the procedures)
+├── .claude/skills/       # publish, check, close, fallback, adopt, backup (the procedures)
 ├── .claude/hooks/        # guard.py + ../settings.json: three hard rules (needs python3)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine (gitignored); entries end with (verified date, source)
 ├── reports/              # gitignored: YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close
