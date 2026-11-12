@@ -27,10 +27,5 @@ node_modules/
 # Logs
 *.log
 
-# Site inventory (hosts, accounts) and runtime state stay local
-inventory.yaml
-state/*
-!state/.gitkeep
-
-# Python test cache
-.pytest_cache/
+# Site machine list stays local
+targets.yaml

@@ -1,0 +1,17 @@
+# Copy to targets.yaml (gitignored) and edit. See DESIGN.md section 2.
+# Put ProxyJump, User, IdentityFile in ~/.ssh/config, not here.
+# Test first: ssh -o BatchMode=yes <host> true
+
+box1:                       # type A: direct node
+  enter: "ssh box1"
+  runner: herdr
+
+hpc1:                       # type B1: jumper that can run agents, Slurm
+  enter: "ssh hpc1-login"
+  job_exec: "srun --jobid={job} --overlap"
+  runner: herdr
+
+corp:                       # type B2: jumper for scheduler commands only, in-house scheduler
+  enter: "ssh corp-jumper"
+  job_exec: "myrun --job {job} --"
+  runner: local
