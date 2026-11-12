@@ -29,3 +29,6 @@ node_modules/
 
 # Site machine list stays local
 targets.yaml
+
+# Copies of task records brought back by /close (can hold site details)
+reports/tasks/
