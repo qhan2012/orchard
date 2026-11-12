@@ -156,3 +156,11 @@
 - Change: `/publish` step 1 (plan says what, not how; subagent for facts, notes in `tasks/<task>/plan-notes.md`); new "Follow-up" section; launch card lines `From`, `Then`, `Check`; task fields `from`, `then`; `CLAUDE.md` hand-off rule, the review exception, and "After a check" `done`; `DESIGN.md` 4e; README example.
 - Guard: the follow-up starts without a wait only inside what the person approved at the research task's review. It stops if the proposal is missing, negative, outside the limits, or a check fails. `then:` is cleared at start, so it runs once.
 - Depends on a check cadence: the follow-up starts when a check sees `done`.
+
+## 22. Review pass 3 (2026-11-12)
+- Sanity: `/publish` step 4 used `mkdir tasks/<task>`, which fails when the planning subagent already made the directory for `plan-notes.md`. Now `mkdir -p`.
+- Sanity: the follow-up name `<task>-run` can break the 32-character rule. Now checked at the research task's review.
+- Low-hanging: skills pointed to `DESIGN.md` sections for the README block texts, so the master had to load a 487-line file to publish a local task. The two blocks are now in `.claude/skills/publish/blocks.md`, and no skill needs `DESIGN.md`. If the two differ, the skills win.
+- Low-hanging: the launch card leaves out lines that have no value. The remote blocks tell the local worker to quote remote commands.
+- Proofread: a glued sentence in `/publish` step 1; `DESIGN.md` 3 example lacked `files` and `remotes`; the `Remotes` example had no `BatchMode`.
+- Over-engineering candidates, reported to the person, not changed: the follow-up chain (most logic, no use yet); `DESIGN.md` repeats the skills; `/publish` is 120 lines; support for codex and cursor is unverified.

@@ -1,6 +1,7 @@
 # orchard design
 
-Status: agreed with the person on 2026-11-11. Not yet run on real machines.
+Status: agreed with the person on 2026-11-11 and 2026-11-12. This file gives the reasons. The skills in
+`.claude/skills/` are what the master follows; if they differ, the skills win. Not yet run on real machines.
 
 ## 0. Goal
 
@@ -76,6 +77,8 @@ agent_name: moe-nan-debug
 agent_session:         # native session id, written at close
 workspace: local:/home/qh/myworks/moe-nan-debug   # where the harness is (absolute path)
 remote_dir: /proj/qh/myworks/moe-nan-debug        # runner: local only
+remotes:               # research only: places to read
+files: [run.log, config.yaml]   # input files, now in tasks/moe-nan-debug/
 harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
 from:                  # research task that this task follows (4e)
 then:                  # research only: follow-up approved in advance (4e)
@@ -180,8 +183,8 @@ the plan:
 
 ```markdown
 ### Remotes (read-only)
-- corp: ssh jumper — /proj/qh/myworks/moe-nan-debug
-- box1: ssh box1 — /home/qh/myworks/moe-baseline
+- corp: ssh -o BatchMode=yes jumper — /proj/qh/myworks/moe-nan-debug
+- box1: ssh -o BatchMode=yes box1 — /home/qh/myworks/moe-baseline
 - local copy: <orchard>/reports/tasks/moe-sweep
 - Rules:
   - Read only. Do not run jobs, and do not change or make files on a remote.
@@ -265,7 +268,9 @@ local machine only. The remote has a plain work directory,
 | `codebases/` | `REPOS.md` only | the code |
 | `experiments/` | small results (metrics, summaries) | run directories, full logs |
 
-The master adds this block under Constraints in the local `README.md`:
+The master adds this block under Constraints in the local `README.md`
+(the text that the master uses is in `.claude/skills/publish/blocks.md`;
+this copy is an example):
 
 ```markdown
 ### Remote

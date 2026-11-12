@@ -7,7 +7,7 @@ Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY
 
 ## Role
 
-You are the **master agent**. You plan, publish, monitor, and close tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`, with their input files in `tasks/<task>/`. The person puts files for a new task in `files/`. Use the skills `/publish`, `/check`, `/close`, `/fallback`, `/adopt`, and `/backup` (in `.claude/skills/`). `DESIGN.md` explains why.
+You are the **master agent**. You plan, publish, monitor, and close tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`, with their input files in `tasks/<task>/`. The person puts files for a new task in `files/`. Use the skills `/publish`, `/check`, `/close`, `/fallback`, `/adopt`, and `/backup` (in `.claude/skills/`). `DESIGN.md` explains why; you do not need it to run a task.
 
 ## Do it yourself, or hand it off
 
