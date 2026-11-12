@@ -57,6 +57,7 @@ is also the workspace directory name.
 ```yaml
 ---
 task: moe-nan-debug
+kind: experiment       # experiment | research (4e)
 target: corp
 runner: local
 agent: claude
@@ -141,6 +142,40 @@ The prompt is short, because the plan is in the file:
 > Read `README.md § Project Scope` and `CLAUDE.md`. Then do the task in autonomous long-run mode.
 
 An agent that restarts reads the same files and continues.
+
+### 4e. Task kinds
+
+Every task has its own workspace made from the harness. Two kinds:
+
+| `kind` | For | Agent and workspace | Remote access |
+|---|---|---|---|
+| `experiment` | run, build, or debug on one target | on the target, or local with a `### Remote` block | read and write on that target |
+| `research` | a deep dive across targets with web search: analysis, comparison, report | local (`target: local`, `runner: local`) | read-only on every listed target |
+
+A research worker runs locally because the local machine has web access,
+the work belongs to no single target, and a long session is safest there.
+The master knows where each task's workspace is (`tasks/*.md`; closed tasks
+have a local copy in `reports/tasks/`), so it writes the places to read into
+the plan:
+
+```markdown
+### Remotes (read-only)
+- corp: ssh jumper — /proj/qh/myworks/moe-nan-debug
+- box1: ssh box1 — /home/qh/myworks/moe-baseline
+- local copy: <orchard>/reports/tasks/moe-sweep
+- Rules:
+  - Read only. Do not run jobs, and do not change or make files on a remote.
+  - Copy only small files (reports, metrics). Do not copy checkpoints or datasets.
+  - If the analysis needs a new experiment, write the request in the report. Do not run it.
+```
+
+A new experiment that the research asks for is a separate `experiment`
+task. The person decides, and the master publishes it. So analysis and
+changes to remote state stay in different agents.
+
+To start the right kind, the master does not guess. It shows the person a
+launch card first (task, kind, where the agent runs, workspace, remotes,
+goal) and waits. If the request does not say the kind, it asks.
 
 ### Runner `local`
 
