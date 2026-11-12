@@ -89,21 +89,26 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    To write a remote file: `E 'cat > W/README.md' < local-copy`.
    **Send the input files.** Copy `tasks/<task>/` into the workspace `files/` directory (the harness has it for this): on a target, `tar -C tasks/<task> -cf - . | E 'tar -C W/files -xf -'`; locally, the same without `E`. The copy in `tasks/<task>/` stays as the master's record. Add one line to the plan Constraints: "Input files are in `files/`: <names>."
 6. **Seed memory.** If `memory/target-<target>.md` exists here (for `research`: one per target in `remotes`), copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`. The harness copy has no `MEMORY.md`: make it first, with the heading `# Memory index`.
-7. **Start the agent in herdr** (see memory `herdr-cli-facts`). Use session `orchard`. Set `session: orchard` and `agent_name: <task>` in the task file.
+7. **Start the agent in herdr** (see memory `herdr-cli-facts`). `S` is the herdr session:
+   - On a target: `orchard`. Orchard starts this server itself, so it stays apart from sessions that the person runs there.
+   - Locally: the session that you run in. The person starts that herdr, and by default its name is `default`. Use `$HERDR_SESSION` if it is set; if `HERDR_ENV=1` and it is empty, use `default`. The server runs already: do not start one.
+   - Locally, when you are not inside herdr (`HERDR_ENV` is not `1`): `orchard`, and start the server if there is none.
+
+   Set `session: S` and `agent_name: <task>` in the task file.
    ```bash
-   herdr --session orchard status server      # if no server: setsid nohup herdr --session orchard server > ~/.orchard-herdr.log 2>&1 < /dev/null &
-   herdr --session orchard workspace create --cwd W --no-focus --label <task>   # read .result.root_pane.pane_id
-   herdr --session orchard agent start <task> --kind <agent> --pane <pane_id> [-- <agent_args for this kind>]
-   herdr --session orchard agent get <task>     # read agent_status before you send the prompt
-   herdr --session orchard agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."
+   herdr --session S status server      # only for S = orchard, if no server: setsid nohup herdr --session orchard server > ~/.orchard-herdr.log 2>&1 < /dev/null &
+   herdr --session S workspace create --cwd W --no-focus --label <task>   # read .result.root_pane.pane_id
+   herdr --session S agent start <task> --kind <agent> --pane <pane_id> [-- <agent_args for this kind>]
+   herdr --session S agent get <task>     # read agent_status before you send the prompt
+   herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."
    ```
    On a target, each line is one remote command in single quotes, for example:
-   `E 'herdr --session orchard agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."'`
-   **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (`herdr --session orchard`, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
+   `E 'herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."'`
+   **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (their own herdr window for a local agent, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
    After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
    Never run bare `herdr`: it opens the TUI.
    **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions`. An `agent_args` entry for the kind in `targets.yaml` replaces the default. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
-   For `runner: local`, the master usually runs inside the local `orchard` session, so the server is already running: skip the start. The worker gets its own herdr workspace (`--no-focus`), so the master pane does not change.
+   A local worker gets its own herdr workspace (`--no-focus`) in the person's session, so the master pane does not change. That session also holds the person's own panes and agents. Touch only the agents that have a task file here.
 8. **Record.** Set `status: running` in the task file. If the review set a check cadence, write it to `check:` and start the `/loop`. Add a worklog entry with the task, target, runner, workspace, and harness commit.
    After the worker's first job runs, check that the compute node sees `W` (and `datadir`). Record the result in `memory/target-<target>.md`.
 

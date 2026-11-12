@@ -6,7 +6,7 @@ argument-hint: "<task>"
 
 # Move a task to the local runner
 
-Do this when `kills` reaches 2, or when the person says so. It needs the person for the directory review, so at night it waits for them. For a task with `started_by: person`, do it only when the person says so. The new local agent runs in session `orchard`: set `session: orchard`, `agent_name: <task>`, and `started_by: orchard` in the task file.
+Do this when `kills` reaches 2, or when the person says so. It needs the person for the directory review, so at night it waits for them. For a task with `started_by: person`, do it only when the person says so. The new local agent runs in the local session (`/publish` step 7 says which): set `session`, `agent_name: <task>`, and `started_by: orchard` in the task file.
 
 `E` is the target's `enter` command. Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules).
 

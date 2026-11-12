@@ -164,3 +164,10 @@
 - Low-hanging: the launch card leaves out lines that have no value. The remote blocks tell the local worker to quote remote commands.
 - Proofread: a glued sentence in `/publish` step 1; `DESIGN.md` 3 example lacked `files` and `remotes`; the `Remotes` example had no `BatchMode`.
 - Over-engineering candidates, reported to the person, not changed: the follow-up chain (most logic, no use yet); `DESIGN.md` repeats the skills; `/publish` is 120 lines; support for codex and cursor is unverified.
+
+## 23. The local herdr is the person's own, session `default` (2026-11-12)
+- Fact (from user): the person starts the herdr that orchard runs in, and its session has the default name `default`.
+- Before: the docs told the person to start `herdr --session orchard` locally, and `/publish` started local workers in session `orchard`. With the master in `default`, the workers would have been in another session, not next to the master.
+- Change: locally, the session is the master's own (`$HERDR_SESSION`, or `default` when `HERDR_ENV=1` and it is empty; `--session default` selects it, v0.8.2 `src/session.rs`). The master does not start a local server when it is inside herdr. On a target the session stays `orchard`. The task file records the session, so `/check` and `/close` did not change.
+- Safety: the local session also holds the person's own panes and agents. The master touches only agents with a task file. `/close` never closes a herdr workspace without a task file.
+- `docs/first-run.md` step 4 tested the guard with `herdr session stop default`. A "yes" would have stopped the person's own session. It now uses a name that does not exist.

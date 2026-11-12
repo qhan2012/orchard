@@ -5,7 +5,7 @@ target:              # an entry of targets.yaml; `local` (this machine) for a re
 runner:              # herdr | local (default: the target's runner)
 agent: claude        # agent kind (herdr --kind): the person's choice, else the entry's `agent` in targets.yaml, else claude
 started_by: orchard  # orchard | person (adopted with /adopt)
-session: orchard     # herdr session; `default` is the default session
+session:             # herdr session of the agent: `orchard` on a target; locally the master's own session (usually `default`)
 agent_name:          # herdr agent target; default: the task name
 agent_session:       # native agent session id, written by /close if herdr reports one
 workspace:           # <target>:<absolute path>  or  local:<absolute path>; the path ends in myworks/<task>
