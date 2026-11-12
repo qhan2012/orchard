@@ -5,7 +5,7 @@ runner:              # herdr | local (default: the target's runner)
 agent: claude        # agent kind to start
 workspace:           # <target>:~/myworks/<task>  or  local:~/myworks/<task>
 remote_dir:          # runner: local only
-harness:             # harness commit used for the workspace
+harness:             # full harness commit sha used (from HARNESS at publish time)
 status: planned      # planned | running | blocked | idle | killed | done
 kills: 0
 check:               # set at runtime, for example "every 10m"; empty = only when asked

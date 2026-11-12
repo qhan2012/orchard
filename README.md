@@ -23,6 +23,7 @@ Then start Claude Code in this directory and tell it what to do, for example:
 ```
 .
 ├── DESIGN.md             # the design, section by section
+├── HARNESS               # pinned harness repo + commit used for every task workspace
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
