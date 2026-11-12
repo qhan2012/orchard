@@ -50,10 +50,24 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 - **A timeout is not proof of failure.** After a herdr timeout, read the agent's screen before you send the prompt again. Otherwise you can submit the same prompt twice.
 - **Unreachable is not killed.** If `ssh` fails, you know nothing about the agent. Report it. Do not count a kill and do not restart.
 - **Do not answer an agent's approval dialog without a person.** If an agent is `blocked`, read its screen and report. Do not send keys to approve.
-- **The person decides when and how often you check.** For a cadence, record it in the task file and run `/loop <interval> /check <task>`. With no cadence, check only when asked.
+- **The person decides when and how often you check.** With no cadence, check only when asked. See "After a check".
 - **Clean up only at close.** A `done` task keeps its agent. When the person closes the task, run `/close`. It closes the worker's herdr workspace. Keep the workspace directory unless the person says to remove it. Do not stop a herdr server unless the person asks; then show `agent list` and `pane list` first.
 - **Do not stop your own server.** You may run inside the local herdr session `orchard`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). If `$HERDR_SESSION` is not `orchard`, tell the person: local workers start in session `orchard`, so they will not be next to you. Never stop your server or send a prompt to `master`.
 - **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
+
+## After a check
+
+`/check` runs in a subagent and returns a short report for each task. It only looks and records. You act on the report:
+
+- `running`: nothing.
+- `done`: give the person the result. Stop the `/loop` for this task. Keep the agent. Close only when the person says so (`/close`).
+- `blocked`: tell the person what the agent asks. Stop the `/loop`. Do not send keys.
+- `idle`: for `started_by: orchard`, if the plan already answers what the agent waits for, send that answer; otherwise report. For `started_by: person`, report only.
+- `killed`, `started_by: orchard`: add 1 to `kills` in the task file. If `kills` is 2 or more, run `/fallback <task>`. Otherwise run `agent list` once yourself to make sure no agent with that name runs, then start it again (`/publish` step 7) with the prompt plus "Read the worklog first and continue from the last entry."
+- `killed`, `started_by: person`: report only.
+- unreachable: report. Do not count a kill and do not restart. If `unreachable` in the task file is 3 or more, stop the `/loop` and tell the person.
+
+To set a cadence: write `check: every 10m` to the task file, then start `/loop 10m /check <task>`.
 
 ## Guard hook
 
