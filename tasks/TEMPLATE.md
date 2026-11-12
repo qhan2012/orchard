@@ -1,7 +1,7 @@
 ---
 task:                # unique; matches [a-z][a-z0-9_-]{0,31}; also the workspace directory and herdr agent name
 kind: experiment     # experiment (works on one target) | research (local, reads targets, web search)
-target:              # a name from targets.yaml (not `local`); `local` for a research task or an adopted agent on this machine
+target:              # an entry of targets.yaml; `local` (this machine) for a research task or an adopted local agent
 runner:              # herdr | local (default: the target's runner)
 agent: claude        # agent kind (herdr --kind): the person's choice, else the entry's `agent` in targets.yaml, else claude
 started_by: orchard  # orchard | person (adopted with /adopt)

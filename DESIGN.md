@@ -25,11 +25,13 @@ One entry per machine. An entry is a **target**. Three required facts: its
 name, how to get in, and where the agent runs.
 
 ```yaml
-box1: {enter: "ssh box1", runner: herdr}
-corp: {enter: "ssh jumper", job_exec: "myrun --job {job} --", runner: local}
+box1: {enter: "ssh -o BatchMode=yes box1", runner: herdr}
+corp: {enter: "ssh -o BatchMode=yes jumper", job_exec: "myrun --job {job} --", runner: local}
 ```
 
-- `enter`: the command prefix that runs a command on the machine.
+- `enter`: the command prefix that runs a command on the machine. It has
+  `-o BatchMode=yes`, so `ssh` fails at once and never waits for a password.
+  The skills call it `E` and always send one quoted string: `E '<command>'`.
 - `job_exec` (optional): the command on that machine that runs a command
   inside a scheduler job. Slurm: `srun --jobid={job} --overlap`. An in-house
   scheduler has its own.
@@ -77,6 +79,7 @@ remote_dir: /proj/qh/myworks/moe-nan-debug        # runner: local only
 harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
 status: running        # planned | running | blocked | idle | killed | done | closed
 kills: 0
+unreachable: 0         # unreachable checks in a row
 check: every 10m       # set at runtime; empty = only when asked
 last_checked: 2026-11-11T21:40
 latest: iteration 3, reproducer down to 40 lines
@@ -239,7 +242,7 @@ The master adds this block under Constraints in the local `README.md`:
 ```markdown
 ### Remote
 - Target: corp
-- Enter: ssh jumper
+- Enter: ssh -o BatchMode=yes jumper
 - Job exec: myrun --job {job} --
 - Remote dir: <remote workdir>/<task>
 - Rules:

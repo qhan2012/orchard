@@ -20,7 +20,7 @@ herdr --session orchard                  # opens the TUI; in its first pane:
 cd <orchard checkout> && claude          # the master names itself `master` at start
 ```
 
-Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). To choose the worker's CLI, say it ("... with codex"); otherwise the default in `targets.yaml` applies, then `claude`. The master shows a launch card (kind, where the agent runs, workspace, remotes) and waits for your OK. For example:
+Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). To choose the worker's CLI, say it ("... with codex"); otherwise the default in `targets.yaml` applies, then `claude`. Before it makes anything, the master shows one review screen (launch card, plan, directory and disk use) and waits for your OK. For example:
 
 - "Experiment on `box1`: find why the MoE run gives NaN." → `/publish`, kind `experiment`
 - "Research: compare the MoE runs on `corp` and `box1`, search for known causes, write a report." → `/publish`, kind `research` (local agent, reads the targets, web search)
@@ -63,10 +63,10 @@ This repo is public. Your machine list, task files, machine memory, and reports 
 
 ## Project Scope
 
-**Goal.** From one local machine, a master agent plans, publishes, and monitors agent tasks on remote machines, and moves a task to a local agent when the remote kills agents.
+**Goal.** From one local machine, a master agent plans, publishes, monitors, and closes agent tasks on remote machines. It moves a task to a local agent when the remote kills agents, and it can take over an agent that the person started.
 
 **Success criteria.**
-1. Publish: after the person confirms the kind and reviews the directory and its disk use, a task gets a workspace at `<workdir>/<task>/` (default `~/myworks/<task>/`) made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
+1. Publish: after the person reviews the launch card, the plan, and the directory with its disk use, a task gets a workspace at `<workdir>/<task>/` (default `~/myworks/<task>/`) made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
 2. Monitor: a check gives the right status (`running`, `done`, `blocked`, `idle`, `killed`) from herdr and the workspace files.
 3. Close: when the person closes a done task, its record is copied back, its lessons are in master memory, and its agent is closed. The workspace directory stays.
 4. Fallback: after two kills, the task continues with a local agent from the last worklog entry.

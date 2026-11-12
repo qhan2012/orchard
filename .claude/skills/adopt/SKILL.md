@@ -15,14 +15,13 @@ The person started the agent. The person's request to adopt it is their consent 
    - `E herdr --session <session> agent list`. Match by name, `pane_id`, or `cwd`.
    - No match, or more than one: show the candidates (pane id, kind, cwd, status) and ask. Do not guess.
 2. **Read it.** `E herdr --session <session> agent read <pane_id or name> --source recent-unwrapped --lines 120`. Learn what it is doing. Send nothing.
-3. **Name it.** If it has no name: `E herdr --session <session> agent rename <pane_id> <task>`. Tell the person. If it already has a name, keep that name. The name is the `agent_name` in the task file. A name is cleared when the agent exits; then use its `pane_id`.
+3. **Name it.** The task name must match `[a-z][a-z0-9_-]{0,31}`, must not be `master`, and no `tasks/<task>.md` may exist. If it has no name: `E herdr --session <session> agent rename <pane_id> <task>`. Tell the person. If it already has a name, keep that name. The name is the `agent_name` in the task file. A name is cleared when the agent exits; then use its `pane_id`.
 4. **Find its workspace.** Its `cwd` from `agent list`. Look for harness files: `README.md` with `## Project Scope`, and `reports/`.
    - Found: `/check` uses them as for any task.
    - Not found: `/check` uses the herdr state and the screen only. Do not add harness files unless the person asks.
 5. **Write the task file.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Set:
    - `started_by: person`, `session`, `agent_name`, `agent` (kind from `agent list`)
    - `target` (or `local`), `runner` (`herdr` if on a target, `local` if on this machine), `workspace: <target>:<cwd>` (absolute path)
-   - `harness`: empty, or what the workspace says if it is a harness copy
-   - `status` from steps 1 and 2, `kills: 0`, `last_checked`, `latest`
+   - `status` from steps 1 and 2, `kills: 0`, `unreachable: 0`, `last_checked`, `latest`; leave `kind` and `harness` as they are if you do not know them
    - Plan section: the person's goal in their words, plus one line on what the screen shows.
 6. **Record.** Add a worklog entry: task, where, session, agent name, pane id, and the commands you ran. Ask the person if they want a check cadence (`/loop <interval> /check <task>`).

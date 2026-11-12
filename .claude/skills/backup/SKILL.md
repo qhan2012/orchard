@@ -33,7 +33,8 @@ git -C C push -q
 ```
 
 - It copies only the site data. It never removes a file from the backup, so a file that is lost here stays there.
-- If `pull` or `push` fails, report the error and stop. Do not force. The copy in `C/F` is still there for the next run.
+- A new, empty repo has nothing to pull: skip the `pull` then, and push with `git -C C push -q -u origin HEAD`.
+- If `pull` or `push` fails for another reason, report the error and stop. Do not force. The copy in `C/F` is still there for the next run.
 - Report one line: how many files changed, and the commit.
 
 ## Restore (`/backup restore`)

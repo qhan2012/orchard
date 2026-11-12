@@ -6,7 +6,8 @@ otherwise, so the normal permission flow applies.
 
 It matches the command text, so it can also match a command that only
 mentions these words (for example inside a prompt). That is accepted: the
-reason tells the master what to do.
+reason tells the master what to do. A rule looks inside one simple command
+only: it does not join words across `;`, `&`, or `|`.
 """
 import json
 import re
@@ -14,13 +15,13 @@ import sys
 
 RULES = [
     # (decision, pattern, reason)
-    ("deny", r"\bherdr\b.*\b(agent|pane)\s+send-keys\b",
+    ("deny", r"\bherdr\b[^;&|]*\b(agent|pane)\s+send-keys\b",
      "orchard guard: the master does not send keys to an agent. A blocked agent "
      "waits for the person. Read its screen and report."),
-    ("ask", r"\bherdr\b.*\b(server|session)\s+stop\b",
+    ("ask", r"\bherdr\b[^;&|]*\b(server|session)\s+stop\b",
      "orchard guard: this stops a herdr server and every agent in it. "
      "Only the person decides this."),
-    ("deny", r"\bgit\b.*\badd\b.*\s(--force\b|-[A-Za-z]*f[A-Za-z]*\b)",
+    ("deny", r"\bgit\b[^;&|]*\badd\b[^;&|]*\s(--force\b|-[A-Za-z]*f[A-Za-z]*\b)",
      "orchard guard: this repo is public. A forced add can publish gitignored "
      "site data (targets, tasks, machine memory, reports)."),
 ]

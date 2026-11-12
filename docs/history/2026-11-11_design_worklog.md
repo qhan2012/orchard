@@ -135,3 +135,11 @@
 - Change: new skill `/backup` (`set`, back up, `restore`); location in gitignored `backup.local`; `CLAUDE.md` says when to run it. The master checks that the repo is private and is not the public orchard repo.
 - DECISION: `tar`, not `rsync`, because `rsync` is not on every machine (it was absent in the test environment). Backup never deletes; restore uses `tar -k` and never overwrites.
 - Verified locally with temporary directories: the backup holds only site data (no template, no `.gitkeep`, no shared memory files); restore brings back a deleted task file and keeps a changed `targets.yaml`. The git and `gh` steps were not run.
+
+## 19. Review pass: red flags, proofread, consistency (2026-11-12)
+- Red flag fixed: `enter` in the examples was `ssh <host>` with no `-o BatchMode=yes`, but the skills run `E '<command>'` as written. A password prompt would hang the master. Now `enter` carries the option (`targets.example.yaml`, `DESIGN.md` 2), and `CLAUDE.md` says to add it if a target lacks it.
+- Red flag fixed: the guard rules used `.*`, so words from two commands in one line could match together (`git add x && tar -xf y` was denied as a forced add). The rules now stay inside one simple command. 10 sample commands tested.
+- Gap fixed: `/close` skipped the record copy for a local workspace, so local-runner and research tasks had no record in `reports/tasks/`, which `/backup` and later research tasks read. It now copies for both.
+- Consistency: README (one review screen, six skills, goal), `docs/first-run.md` step 2 (six skills), task template (`target: local` wording), `DESIGN.md` 3 example (`unreachable`), `/fallback` step 1 (directory part of `/publish` step 3), `/adopt` (task name rule, `unreachable`), `/publish` (draft task file is deleted if the person says no), `/backup` (empty repo).
+- Mechanical checks: skill frontmatter parses; every `/skill` reference names one of the six skills or a Claude Code command; step references match; code fences balance; every `enter` in the example has `BatchMode`.
+- Left as is: a running local workspace has no backup until close; `/fallback` waits for the person's directory review.
