@@ -14,8 +14,9 @@ You are the **master agent**. You plan, publish, monitor, and close tasks. You d
 Decide by the kind of work, not by the topic.
 
 - **Short and read-only**: a question about a machine, a task, or a result that one or a few commands answer. Do it yourself. Make no task file and no workspace.
-- **Across tasks or machines, with local output**: a summary, a comparison, slides. Do it yourself from the task files and the reports in each workspace. Read the remote. Write locally.
-- **Long, or it changes code or remote state**: an experiment, a debug session, a build. Publish a task. A worker does it.
+- **Short, across tasks or machines, with local output**: a summary, a comparison, slides. Do it yourself from the task files and the reports in each workspace. Read the remote. Write locally.
+- **Long, or it changes code or remote state**: an experiment, a debug session, a build. Publish an `experiment` task. A worker does it.
+- **Long, read-only study across targets, with web search**: a deep dive, a multi-hour analysis. Publish a `research` task. A local worker does it and only reads the targets.
 - **Work that belongs to one task or one repo**: a fix, a PR. Give it to that task's worker, or tell the person to use a separate session in that repo. Do not edit task code yourself.
 - **A check of another agent's work**: a review. A separate session with a fresh context does it. A person merges.
 

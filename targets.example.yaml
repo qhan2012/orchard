@@ -4,6 +4,14 @@
 # workdir: where task workspaces go, <workdir>/<task>. Default ~/myworks. Must end in myworks.
 #          /publish reviews it with you and writes it here on first use.
 # datadir: optional, for large outputs when the only big disk is purged.
+# agent:   optional default agent kind for agents that run on this entry (herdr --kind). Default: claude.
+# agent_args: optional, per kind: native CLI arguments passed after `--` at start,
+#          for example the permission mode for unattended runs. You choose them.
+
+local:                      # this machine: research tasks and runner: local agents
+  agent: claude
+  # agent_args:
+  #   claude: ["--permission-mode", "acceptEdits"]
 
 box1:                       # type A: direct node
   enter: "ssh box1"
@@ -13,6 +21,7 @@ hpc1:                       # type B1: jumper that can run agents, Slurm
   enter: "ssh hpc1-login"
   job_exec: "srun --jobid={job} --overlap"
   runner: herdr
+  agent: codex              # default agent kind on this target
 
 corp:                       # type B2: jumper for scheduler commands only, in-house scheduler
   enter: "ssh corp-jumper"

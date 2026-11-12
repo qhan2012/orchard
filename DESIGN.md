@@ -34,6 +34,8 @@ corp: {enter: "ssh jumper", job_exec: "myrun --job {job} --", runner: local}
   scheduler has its own.
 - `runner`: `herdr` (agent on the machine) or `local` (agent on the local
   machine, works through `enter`).
+- `agent` (optional): the default agent kind for agents that run there.
+- `agent_args` (optional): per kind, native CLI arguments for the start.
 - `workdir` (optional): where workspaces go, `<workdir>/<task>`. Default
   `~/myworks`. It always ends in `myworks`.
 - `datadir` (optional): a place for large outputs, when the only big disk is
@@ -47,6 +49,9 @@ Machine types seen so far:
 | B1: jumper that can run agents | `ssh jumper`, then the scheduler | on the jumper, or local |
 | B2: jumper for scheduler commands only | same | local only |
 
+One more entry, `local`, is this machine. It has no `enter`. It holds the
+default `agent` and `agent_args` for agents that run locally.
+
 Config goes in `targets.yaml`. Reasons and quirks go in memory (section 8).
 
 ## 3. Task: `tasks/<task>.md`
@@ -57,6 +62,7 @@ is also the workspace directory name.
 ```yaml
 ---
 task: moe-nan-debug
+kind: experiment       # experiment | research (4e)
 target: corp
 runner: local
 agent: claude
@@ -141,6 +147,64 @@ The prompt is short, because the plan is in the file:
 > Read `README.md § Project Scope` and `CLAUDE.md`. Then do the task in autonomous long-run mode.
 
 An agent that restarts reads the same files and continues.
+
+### 4e. Task kinds
+
+Every task has its own workspace made from the harness. Two kinds:
+
+| `kind` | For | Agent and workspace | Remote access |
+|---|---|---|---|
+| `experiment` | run, build, or debug on one target | on the target, or local with a `### Remote` block | read and write on that target |
+| `research` | a deep dive across targets with web search: analysis, comparison, report | local (`target: local`, `runner: local`) | read-only on every listed target |
+
+A research worker runs locally because the local machine has web access,
+the work belongs to no single target, and a long session is safest there.
+The master knows where each task's workspace is (`tasks/*.md`; closed tasks
+have a local copy in `reports/tasks/`), so it writes the places to read into
+the plan:
+
+```markdown
+### Remotes (read-only)
+- corp: ssh jumper — /proj/qh/myworks/moe-nan-debug
+- box1: ssh box1 — /home/qh/myworks/moe-baseline
+- local copy: <orchard>/reports/tasks/moe-sweep
+- Rules:
+  - Read only. Do not run jobs, and do not change or make files on a remote.
+  - Copy only small files (reports, metrics). Do not copy checkpoints or datasets.
+  - If the analysis needs a new experiment, write the request in the report. Do not run it.
+```
+
+A new experiment that the research asks for is a separate `experiment`
+task. The person decides, and the master publishes it. So analysis and
+changes to remote state stay in different agents.
+
+To start the right kind, the master does not guess. It shows the person a
+launch card first (task, kind, where the agent runs, workspace, remotes,
+goal) and waits. If the request does not say the kind, it asks.
+
+### 4f. Agent kind
+
+Which CLI runs the worker (herdr `--kind`: `claude`, `codex`, `cursor`,
+...) is decided in this order: (1) what the person says in the request;
+(2) the `agent` of the entry where the agent runs, in `targets.yaml`;
+(3) `claude`. The launch card shows it, so the person can change it.
+
+Before the start, the master checks on that machine that the CLI is
+installed (`command -v`; `cursor` is `cursor-agent`). Login is asked once
+per machine and kind, and recorded in memory. If either fails, the master
+stops. It does not change the kind itself.
+
+What changes with the kind:
+- Rules: nothing. The harness has `AGENTS.md` and `.cursorrules`, which
+  point to `CLAUDE.md`.
+- Permissions for unattended runs: each CLI has its own flags. They go in
+  `agent_args` per kind, chosen by the person, and herdr passes them after
+  `--`. Without them, a long task can stop at approval prompts (`blocked`).
+- Resume after close: herdr 0.8.2 can resume `claude`, `codex`, and
+  `cursor` from a session id, if its integration reported one.
+
+The master itself needs Claude Code, because it uses skills and `/loop`.
+Workers do not.
 
 ### Runner `local`
 
