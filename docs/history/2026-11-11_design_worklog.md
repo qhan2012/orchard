@@ -129,3 +129,9 @@
 - The actions moved to `CLAUDE.md` "After a check", because the master sees only the report, not the skill text: stop the loop, report, answer an idle agent, count kills, restart, `/fallback`.
 - New task field `unreachable` (count in a row), so "stop the loop after 3" survives between rounds.
 - Not verified: that a forked skill can read and write the task files, and how `/loop` shows its result. `docs/first-run.md` step 11 checks it and names the way back (remove `context: fork`).
+
+## 18. Backup of the site data (2026-11-12)
+- Need (from user): after the master starts, the person may give a subfolder of a private GitHub repo to back up the local state.
+- Change: new skill `/backup` (`set`, back up, `restore`); location in gitignored `backup.local`; `CLAUDE.md` says when to run it. The master checks that the repo is private and is not the public orchard repo.
+- DECISION: `tar`, not `rsync`, because `rsync` is not on every machine (it was absent in the test environment). Backup never deletes; restore uses `tar -k` and never overwrites.
+- Verified locally with temporary directories: the backup holds only site data (no template, no `.gitkeep`, no shared memory files); restore brings back a deleted task file and keeps a changed `targets.yaml`. The git and `gh` steps were not run.
