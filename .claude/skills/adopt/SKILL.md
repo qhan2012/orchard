@@ -8,7 +8,7 @@ argument-hint: "<task> [where: target, session, pane or name]"
 
 The person started the agent. The person's request to adopt it is their consent to name it and to monitor it. It is not consent to prompt, restart, stop, or move it.
 
-`E` is the target's `enter` command. For a local agent, run the commands without `E`.
+`E` is the target's `enter` command. Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules). For a local agent, run the commands without `E`.
 
 1. **Find the agent.** Use what the person gave: target, session, pane id, agent name, or directory.
    - Session unknown: `E herdr session list --json`. Most hand-started agents are in session `default`.

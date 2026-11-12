@@ -13,7 +13,7 @@ Argument: a task name. With no argument, check every open task: `status` is `run
 - "Check `<task>` every 10 minutes": write `check: every 10m` to the task file, then start `/loop 10m /check <task>`. Stop the loop when the task is `done`, `blocked`, or `killed`, or after 3 checks in a row that find the target unreachable, and tell the person.
 - `/loop` lives only in this session. After a restart, look for tasks with a `check:` value and tell the person which loops to start again.
 
-For each task to check, `S` is the task's `session` and `A` is its `agent_name` (default: the task name):
+For each task to check, `S` is the task's `session`, `A` is its `agent_name` (default: the task name), and `E` is the target's `enter` command (none for a local agent). Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules).
 
 1. **Agent state.** `herdr --session S agent list` on the side where the agent runs. Find the agent `A`. Skip the agent named `master`: that is you.
    If the command fails, find out why before you decide anything:

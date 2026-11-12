@@ -10,7 +10,7 @@ Only the person closes a task. `done` alone is not a reason to close. If the tar
 
 For a task with `started_by: person`: do steps 2 to 4 only, then set `status: closed`. Do not touch the agent.
 
-`E` is the target's `enter` command (none for a local agent). `S` is the task's `session`, `A` its `agent_name`, `W` its workspace path.
+`E` is the target's `enter` command (none for a local agent). Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules). `S` is the task's `session`, `A` its `agent_name`, `W` its workspace path.
 
 1. **Record the session id.** `E herdr --session S agent get A`. If the reply has `agent_session`, write its id to `agent_session:` in the task file. With it, the conversation can be resumed later (for example `claude --resume <id>` in `W`). If it is absent, tell the person that the agent's conversation ends with the close.
 2. **Check leftover jobs.** On a target with a scheduler, list the person's jobs whose name starts with `<task>-` (Slurm: `squeue --me --name` does not match a prefix, so use `squeue --me --format='%i %j %T' | grep ' <task>-'`). If any is left, show it and ask. Do not cancel it yourself. Another scheduler is not covered yet: tell the person to check.

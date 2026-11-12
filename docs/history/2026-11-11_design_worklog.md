@@ -103,3 +103,8 @@
 - Question (from user): many small questions add context to the master. Better practice?
 - DECISION (user): `CLAUDE.md`: a short read-only question that needs a command goes to a subagent, and the master keeps only the conclusion. The master's context is disposable, so lasting facts go to files at once. README: a table of habits (`/btw`, just ask, `/clear`, a different session).
 - Sources: https://code.claude.com/docs/en/interactive-mode (`/btw`: no history, no tools), https://code.claude.com/docs/en/subagents (own context, returns the summary).
+
+## 14. Remote quoting, first-start dialog, first-run checklist (2026-11-12)
+- Red flag 1: the skills wrote `E herdr ... agent prompt <task> "text"`. `ssh` joins its arguments, so the remote shell splits the text. Shown with a stand-in ssh: 10 arguments without the outer quotes, 4 with them. Fix: rule "Quote remote commands" in `CLAUDE.md`; every skill names the remote form; `/publish` step 7 shows a full example.
+- Red flag 2: a new workspace directory can make the agent ask a first-start question. Then herdr reports `blocked` and refuses the prompt, and the master may not send keys. Fix: `/publish` step 7 reads the status before the prompt, and on `blocked` asks the person to answer in the TUI. It also checks for `working` after the prompt.
+- New `docs/first-run.md`: 12 steps, each checks one assumption that was taken from docs or source only.

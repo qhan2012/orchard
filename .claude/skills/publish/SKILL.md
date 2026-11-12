@@ -6,7 +6,7 @@ argument-hint: "<task>"
 
 # Publish a task
 
-`E` is the target's `enter` command. With `runner: herdr`, the workspace is on the target: put `E` in front of each workspace command. With `runner: local`, the workspace is local: run the commands as they are.
+`E` is the target's `enter` command. Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules). With `runner: herdr`, the workspace is on the target: put `E` in front of each workspace command. With `runner: local`, the workspace is local: run the commands as they are.
 
 `W` is the workspace directory: `<workdir>/<task>`. `<workdir>` is the target's `workdir` in `targets.yaml`. The default is `~/myworks`. The last part of `<workdir>` is always `myworks`.
 
@@ -75,8 +75,13 @@ argument-hint: "<task>"
    herdr --session orchard status server      # if no server: setsid nohup herdr --session orchard server > ~/.orchard-herdr.log 2>&1 < /dev/null &
    herdr --session orchard workspace create --cwd W --no-focus --label <task>   # read .result.root_pane.pane_id
    herdr --session orchard agent start <task> --kind <agent> --pane <pane_id> [-- <agent_args for this kind>]
+   herdr --session orchard agent get <task>     # read agent_status before you send the prompt
    herdr --session orchard agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."
    ```
+   On a target, each line is one remote command in single quotes, for example:
+   `E 'herdr --session orchard agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."'`
+   **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (`herdr --session orchard`, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
+   After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
    Never run bare `herdr`: it opens the TUI.
    `agent_args` come from `targets.yaml` (per kind). They set how the agent handles permissions when nobody watches. If none are set for this kind, start without them and tell the person that the agent can stop at approval prompts.
    For `runner: local`, the master usually runs inside the local `orchard` session, so the server is already running: skip the start. The worker gets its own herdr workspace (`--no-focus`), so the master pane does not change.
