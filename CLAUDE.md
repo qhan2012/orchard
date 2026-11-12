@@ -30,12 +30,12 @@ If you are not sure, ask: will this fill my context with the details of one task
    - Never overwrite an existing `~/myworks/<task>` directory. Stop and tell the person.
    - Ask before you loosen tolerances or touch root files or dependencies.
 3. **Smoke test where needed.** Before you publish a long task to a machine for the first time, run one short command there (`hostname`, `herdr --version`).
-4. **Compare apple to apple.** Use the same data, hardware, and config. Change only the variable under test.
-5. **Write reports that are precise, short, and easy to understand.** Cover code name, cluster or node, job id, date, prompt, metric, and result.
-6. **Separate correctness runs from perf runs.** Remind the user if correctness is unchecked at a milestone or at the end.
-7. **Make every task self-contained.** Put all site values in `targets.yaml`. Record the target, runner, workspace, and harness commit in the task file.
-8. **Reply in English or Chinese only.** Match the prompt. Default to English.
-9. **Write plainly.** Use ASD-STE100-style simplified technical language: short, active-voice sentences and consistent terms. Keep technical accuracy.
+4. **Write reports that are precise, short, and easy to understand.** Cover task, target, job id, date, status, and result.
+5. **Make every task self-contained.** Put all site values in `targets.yaml`. Record the target, runner, workspace, and harness commit in the task file.
+6. **Reply in English or Chinese only.** Match the prompt. Default to English.
+7. **Write plainly.** Use ASD-STE100-style simplified technical language: short, active-voice sentences and consistent terms. Keep technical accuracy.
+
+Rules for doing the task work (apple-to-apple comparisons, separate correctness and perf runs, autonomous long-run mode) are in each worker's workspace `CLAUDE.md`, from the harness. They are not repeated here.
 
 ## Remote-control rules
 
@@ -45,15 +45,6 @@ If you are not sure, ask: will this fill my context with the details of one task
 - **The person decides when and how often you check.** For a cadence, record it in the task file and run `/loop <interval> /check <task>`. With no cadence, check only when asked.
 - **Clean up what you start.** When a task is done and the person agrees, stop the agent and any herdr server you started. Keep the workspace unless the person says to remove it.
 
-## Autonomous long-run mode (>30 min, unattended)
+## Worklog
 
-Run until you achieve the goal. Never block on human input. Keep a running trace in `reports/YYYY-MM-DD_worklog.md`. Append one entry per iteration, with the job ids and the commands you ran. At job end, write `reports/YYYY-MM-DD_summary.md`. Put blockers and decisions in a section at the top. Pipeline: the worklog is raw. The summary is distilled for humans. Only durable lessons move to memory: lessons from successes, from failures, or from strong evidence-backed findings.
-
-1. **Research prerequisites first.** Establish ground truth before you write intent. Read the repo. Where relevant, read authoritative external docs, and cite them in the worklog. If the docs and the source code or GitHub conflict, the source wins.
-2. **Write intent before launch.** Describe the goal and constraints in a guidance file.
-3. **Make one change per iteration.** Edit only one file or component. This keeps diffs reviewable and prevents cascading failures.
-4. **Validate each step before you move on.** Confirm the current iteration succeeded. Do not compound errors across steps.
-
-**On a blocker at any step, escalate before you skip it.** Do more research. Then step back for a global view. Then find the best direction. Flag the blocker in the worklog with the prefix `BLOCKER:`, and skip it, only when no viable direction remains.
-
-**On an unanswered question, decide after 30 min.** When you ask, state a recommended default. If no answer comes within 30 min, apply the default. Log it in the worklog with the prefix `DECISION:`, and report it at the next progress check.
+Keep `reports/YYYY-MM-DD_worklog.md`. Add one entry when you publish a task, when a check changes a task's status, when you do a fallback, and when you or the person make a decision (prefix `DECISION:`). Record the task, target, and commands you ran. Move only durable lessons to memory.
