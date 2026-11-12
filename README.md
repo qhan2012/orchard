@@ -22,7 +22,7 @@ cd <orchard checkout> && claude          # the master names itself `master` at s
 
 Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). To choose the worker's CLI, say it ("... with codex"); otherwise the default in `targets.yaml` applies, then `claude`. Before it makes anything, the master shows one review screen (launch card, plan, directory and disk use) and waits for your OK. For example:
 
-- "Experiment on `box1`: find why the MoE run gives NaN." → `/publish`, kind `experiment`
+- "Experiment on `box1`: find why the MoE run gives NaN. Use `files/run.log` and `files/config.yaml`." → `/publish`, kind `experiment`. Put a task's input files in `files/` first; the master moves them to `tasks/<task>/` and copies them to the worker
 - "Research: compare the MoE runs on `corp` and `box1`, search for known causes, write a report." → `/publish`, kind `research` (local agent, reads the targets, web search)
 - "Check all tasks." → `/check`
 - "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
@@ -53,7 +53,8 @@ This repo is public. Your machine list, task files, machine memory, and reports 
 ├── HARNESS               # pinned harness repo + commit used for every task workspace
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
-├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
+├── files/                # inbox (gitignored): put the files for a new task here
+├── tasks/                # one <task>.md per task, its input files in <task>/ (gitignored); TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt, backup (the procedures)
 ├── .claude/hooks/        # guard.py + ../settings.json: three hard rules (needs python3)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine (gitignored); entries end with (verified date, source)

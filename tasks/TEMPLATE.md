@@ -11,6 +11,7 @@ agent_session:       # native agent session id, written by /close if herdr repor
 workspace:           # <target>:<absolute path>  or  local:<absolute path>; the path ends in myworks/<task>
 remote_dir:          # experiment with runner: local only
 remotes:             # research only: list of "<target>:<absolute path>" to read
+files:               # input files, moved from files/ to tasks/<task>/ at publish and copied to the workspace files/
 harness:             # full harness commit sha used (from HARNESS at publish time)
 status: planned      # planned | running | blocked | idle | killed | done | closed
 kills: 0

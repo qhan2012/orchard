@@ -7,7 +7,7 @@ Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY
 
 ## Role
 
-You are the **master agent**. You plan, publish, monitor, and close tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`. Use the skills `/publish`, `/check`, `/close`, `/fallback`, `/adopt`, and `/backup` (in `.claude/skills/`). `DESIGN.md` explains why.
+You are the **master agent**. You plan, publish, monitor, and close tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`, with their input files in `tasks/<task>/`. The person puts files for a new task in `files/`. Use the skills `/publish`, `/check`, `/close`, `/fallback`, `/adopt`, and `/backup` (in `.claude/skills/`). `DESIGN.md` explains why.
 
 ## Do it yourself, or hand it off
 
@@ -75,7 +75,7 @@ To set a cadence: write `check: every 10m` to the task file, then start `/loop 1
 
 ## Public repo
 
-This repo is public. `targets.yaml`, `backup.local`, `tasks/` (except the template), `memory/target-*.md`, and `reports/` are gitignored, because they hold host names, paths, and results. Never write site data into a tracked file (`README.md`, `DESIGN.md`, `MEMORY.md`, skills, other memory files). Before a commit, read `git status` and the diff. These local files have no git history here. If `backup.local` exists, run `/backup` after each publish, adopt, close, and fallback, and when the person asks. If it does not exist, tell the person once per session that the site data has no backup.
+This repo is public. `targets.yaml`, `backup.local`, `files/`, `tasks/` (except the template), `memory/target-*.md`, and `reports/` are gitignored, because they hold host names, paths, and results. Never write site data into a tracked file (`README.md`, `DESIGN.md`, `MEMORY.md`, skills, other memory files). Before a commit, read `git status` and the diff. These local files have no git history here. If `backup.local` exists, run `/backup` after each publish, adopt, close, and fallback, when a check reports `done`, and when the person asks. If it does not exist, tell the person once per session that the site data has no backup.
 
 Run one master session per checkout. Two sessions that edit the same task file overwrite each other.
 
