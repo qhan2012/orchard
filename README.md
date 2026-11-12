@@ -1,8 +1,8 @@
 # orchard
 
-A harness for a **master agent**. The master runs on your local machine. It plans, publishes, and monitors tasks. Each task runs in a coding agent inside [herdr](https://github.com/ogulcancelik/herdr) on a remote machine, in a workspace made from [qhan2012/harness](https://github.com/qhan2012/harness). If a remote machine often kills agents, the agent runs locally and works on the remote through SSH.
+A harness for a **master agent**. The master runs on your local machine. It plans, publishes, monitors, and closes tasks. Each task runs in a coding agent inside [herdr](https://github.com/ogulcancelik/herdr) on a remote machine, in a workspace made from [qhan2012/harness](https://github.com/qhan2012/harness). If a remote machine often kills agents, the agent runs locally and works on the remote through SSH.
 
-There is no program here. The master uses `ssh` and `herdr` directly and follows three Claude Code skills. Read `DESIGN.md` for the full design.
+There is no program here. The master uses `ssh` and `herdr` directly and follows five Claude Code skills. Read `DESIGN.md` for the full design.
 
 ## Quick start
 
@@ -38,7 +38,7 @@ Then tell the master what to do, for example:
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt (the procedures)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine; entries end with (verified date, source)
-└── reports/              # YYYY-MM-DD_worklog.md + _summary.md
+└── reports/              # YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close (gitignored)
 ```
 
 ## Project Scope
@@ -48,10 +48,12 @@ Then tell the master what to do, for example:
 **Success criteria.**
 1. Publish: after the person reviews the directory and its disk use, a task gets a workspace at `<workdir>/<task>/` (default `~/myworks/<task>/`) made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
 2. Monitor: a check gives the right status (`running`, `done`, `blocked`, `idle`, `killed`) from herdr and the workspace files.
-3. Fallback: after two kills, the task continues with a local agent from the last worklog entry.
-4. The master never stops or changes something it did not start, unless a person confirms it.
+3. Close: when the person closes a done task, its record is copied back, its lessons are in master memory, and its agent is closed. The workspace directory stays.
+4. Fallback: after two kills, the task continues with a local agent from the last worklog entry.
+5. Adopt: the master can monitor an agent that the person started by hand, and changes it only when the person asks.
+6. The master never stops or changes something it did not start, unless the person confirms it.
 
-**Verifier.** Run one real task through publish, check, and done on a direct node. Then one through fallback.
+**Verifier.** Run one real task through publish, check, done, and close on a direct node. Then one through fallback, and one through adopt.
 
 **Scope boundary.**
 - In scope: the machine list, task files, skills, memory.

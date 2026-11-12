@@ -1,25 +1,27 @@
 # orchard design
 
-Status: agreed with the user on 2026-11-11. Not yet run on real machines.
+Status: agreed with the person on 2026-11-11. Not yet run on real machines.
 
 ## 0. Goal
 
 A **master agent** on the local machine plans, publishes, and monitors tasks.
 A task runs in a coding agent inside herdr on a remote machine. If a remote
 machine often kills agents, the agent runs on the local machine and does its
-work on the remote through SSH.
+work on the remote through SSH. The master can also take over an agent that
+the person started by hand.
 
 ## 1. No code
 
 The master is an agent. It can run `ssh` and `herdr` itself. So orchard is a
-harness repo, not a program: a machine list, a task directory, three Claude
-Code skills (`/publish`, `/check`, `/fallback`), and `CLAUDE.md`. Skills load
-only when used, so `CLAUDE.md` stays short. Add a script only when the same command fails again and again.
+harness repo, not a program: a machine list, a task directory, five Claude
+Code skills (`/publish`, `/check`, `/close`, `/fallback`, `/adopt`), and
+`CLAUDE.md`. Skills load only when used, so `CLAUDE.md` stays short. Add a
+script only when the same command fails again and again.
 
 ## 2. Machine list: `targets.yaml`
 
-One entry per machine. Three facts: its name, how to get in, and where the
-agent runs.
+One entry per machine. An entry is a **target**. Three required facts: its
+name, how to get in, and where the agent runs.
 
 ```yaml
 box1: {enter: "ssh box1", runner: herdr}
@@ -58,8 +60,12 @@ task: moe-nan-debug
 target: corp
 runner: local
 agent: claude
-workspace: local:~/myworks/moe-nan-debug   # where the harness is
-remote_dir: ~/myworks/moe-nan-debug        # runner: local only
+started_by: orchard    # orchard | person (adopted)
+session: orchard       # herdr session of the agent
+agent_name: moe-nan-debug
+agent_session:         # native session id, written at close
+workspace: local:/home/qh/myworks/moe-nan-debug   # where the harness is (absolute path)
+remote_dir: /proj/qh/myworks/moe-nan-debug        # runner: local only
 harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
 status: running        # planned | running | blocked | idle | killed | done | closed
 kills: 0
@@ -89,27 +95,27 @@ their state there.
 **For every new workspace, the person reviews before the master makes it**:
 the directory, the disk use of home and `workdir`, and the alternative
 disks. Commands cannot show everything (`df` on a shared filesystem shows
-the whole filesystem, not the user's quota; purge policy; file-count quota;
+the whole filesystem, not the person's quota; purge policy; file-count quota;
 what compute nodes see), so the master asks once and records the answers in
 `memory/target-<name>.md`.
 
 ### 4b. Make the workspace
 
-In the commands below, `~/myworks` stands for `<workdir>`.
+`W` is the workspace directory, `<workdir>/<task>`.
 
-The workspace is a copy of `qhan2012/harness` at `~/myworks/<task>/`, on the
-side where the agent runs. The harness version is pinned in the `HARNESS`
+The workspace is a copy of `qhan2012/harness` at `W`, on the side where the
+agent runs. The harness version is pinned in the `HARNESS`
 file (repo URL and full commit sha), not the latest main. So all tasks in a
 batch get the same rules, and an upgrade is a one-line PR that a person
 reviews.
 
 ```bash
-test -e ~/myworks/<task> && echo EXISTS      # if it exists: stop, tell the person
-git init -q ~/myworks/<task>
-git -C ~/myworks/<task> fetch -q --depth 1 <url> <sha>   # from HARNESS
-git -C ~/myworks/<task> checkout -q FETCH_HEAD
-git -C ~/myworks/<task> rev-parse HEAD       # must equal <sha>; record in the task file
-rm -rf ~/myworks/<task>/.git                 # so nothing is pushed to qhan2012/harness
+test -e W && echo EXISTS      # if it exists: stop, tell the person
+git init -q W
+git -C W fetch -q --depth 1 <url> <sha>   # from HARNESS
+git -C W checkout -q FETCH_HEAD
+git -C W rev-parse HEAD       # must equal <sha>; record in the task file
+rm -rf W/.git                 # so nothing is pushed to qhan2012/harness
 ```
 
 `HARNESS` also records which harness commit orchard's own `CLAUDE.md` is
@@ -124,7 +130,9 @@ Code repos for the task go in `codebases/`, as the harness says.
 
 The master fills `README.md § Project Scope` in the workspace: goal, success
 criteria, verifier, scope boundary, constraints. The harness `CLAUDE.md`
-already tells the agent to read this section first.
+already tells the agent to read this section first. Two constraints are
+always there: every scheduler job name starts with `<task>-`, and the worker
+cancels its jobs before it writes the summary.
 
 ### 4d. Start the agent
 
@@ -137,9 +145,10 @@ An agent that restarts reads the same files and continues.
 ### Runner `local`
 
 The harness follows the agent. With `runner: local`, the harness is on the
-local machine only. The remote has a plain work directory with the same path.
+local machine only. The remote has a plain work directory,
+`<remote workdir>/<task>`.
 
-| | Local `~/myworks/<task>/` (harness) | Remote `~/myworks/<task>/` (plain) |
+| | Local workspace (harness) | Remote work directory (plain) |
 |---|---|---|
 | `README.md`, `CLAUDE.md`, `MEMORY.md`, `memory/`, `reports/` | yes | |
 | `codebases/` | `REPOS.md` only | the code |
@@ -152,7 +161,7 @@ The master adds this block under Constraints in the local `README.md`:
 - Target: corp
 - Enter: ssh jumper
 - Job exec: myrun --job {job} --
-- Remote dir: ~/myworks/<task>
+- Remote dir: <remote workdir>/<task>
 - Rules:
   - Run every build, test, and experiment on the remote, through Enter.
   - Code and full logs stay on the remote. Do not copy large files to local.
@@ -168,8 +177,9 @@ add "edit locally, `rsync` to the remote" later.
 
 ## 5. Monitor
 
-A check uses two signals. Both runners use the same commands; `runner: herdr`
-adds the `enter` prefix.
+A check covers the open tasks: `running`, `blocked`, `idle`, `killed`. It
+uses two signals. Both runners use the same commands; `runner: herdr` adds
+the `enter` prefix.
 
 1. **Agent state in herdr**: `herdr agent list`, and `herdr agent read` when
    needed. A local agent also runs inside a local herdr.
@@ -183,7 +193,7 @@ adds the `enter` prefix.
 | `running` | agent is there and working | nothing |
 | `done` | summary exists | read it, report. The agent stays, for follow-up questions |
 | `blocked` | herdr says blocked, or worklog has `BLOCKER:` | read the screen or worklog, report. Never approve for the person |
-| `killed` | agent is gone or herdr is unreachable, and no summary | restart, `kills += 1` |
+| `killed` | agent is gone or herdr is unreachable, and no summary | restart, `kills += 1`. Adopted agent: report only |
 | `idle` | agent is there but stopped, no summary | read the screen, decide what it waits for |
 
 Restart after a kill: start the agent again with the same short prompt plus
@@ -209,16 +219,20 @@ workspace directory stays.
 
 The master does not stop herdr servers. A server belongs to a machine, not
 to a task, and an idle server costs almost nothing. It stops one only when
-the person asks, after it shows what still runs there. An adopted agent is
-never closed this way.
+the person asks, after it shows what still runs there. For an adopted
+agent, close only copies the record and collects memory. It does not touch
+the agent.
 
 ## 6. Fallback
 
 When `kills` reaches 2 (default; the person can also say so at any time), the
-master moves the task to `runner: local`: it makes the local harness, adds the
+master moves the task to `runner: local`: it makes the local harness (with
+the directory review of 4a), adds the
 `### Remote` block, copies the remote worklog and memory back, and starts a
 local agent that continues. It also sets the machine's default `runner` to
-`local` in `targets.yaml` and records the reason in memory.
+`local` in `targets.yaml` and records the reason in memory. An adopted task
+moves only when the person asks. If the remote agent still runs, the master
+asks before it closes it.
 
 ## 6a. Master inside herdr
 
@@ -258,7 +272,7 @@ orchard/
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt
 ├── memory/ + MEMORY.md
-└── reports/
+└── reports/              # worklogs; tasks/<task>/ = records copied back at close
 ```
 
 ## 8. Memory
@@ -287,6 +301,8 @@ budgets, automatic memory search. Add one only when a real need shows up.
 
 - herdr inside a scheduler job (agent on a compute node). Today the agent
   runs on the `enter` machine or locally, and uses the scheduler from there.
-- The real `job_exec` command of the in-house scheduler.
-- herdr version: the skills are checked against herdr 0.8.2 (source and docs at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
+- The in-house scheduler: its real `job_exec` command, and how to list jobs
+  by name prefix at close. Deferred.
+- herdr version: the skills are checked against herdr 0.8.2 (source and docs
+  at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
 - Nothing here is verified on a real machine yet.
