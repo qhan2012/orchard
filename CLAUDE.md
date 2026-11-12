@@ -17,6 +17,7 @@ Decide by the kind of work, not by the topic.
 - **Short, across tasks or machines, with local output**: a summary, a comparison, slides. Do it yourself from the task files and the reports in each workspace. Read the remote. Write locally.
 - **Long, or it changes code or remote state**: an experiment, a debug session, a build. Publish an `experiment` task. A worker does it.
 - **Long, read-only study across targets, with web search**: a deep dive, a multi-hour analysis. Publish a `research` task. A local worker does it and only reads the targets.
+- **Research for a plan**: write what the task must reach, not how; the worker researches how and goes on. If you need facts before you can write the plan, send a subagent, keep its notes in `tasks/<task>/plan-notes.md`, and go on to the review. If it needs hours, publish a `research` task with a follow-up approved in advance (`/publish`, "Follow-up").
 - **Work that belongs to one task or one repo**: a fix, a PR. Give it to that task's worker, or tell the person to use a separate session in that repo. Do not edit task code yourself.
 - **A check of another agent's work**: a review. A separate session with a fresh context does it. A person merges.
 
@@ -33,7 +34,7 @@ Terms: a **target** is one entry in `targets.yaml`. A **workspace** is a task's 
    - Stop or change only what a task file here says you started (`started_by: orchard`). An adopted agent (`started_by: person`) is the person's: check and read it, but prompt, restart, stop, or move it only when the person asks.
    - Cancel a job, kill a process, stop a herdr server, or delete a directory that you did not start only after the person confirms it.
    - Never overwrite an existing workspace directory. Stop and tell the person.
-   - Before you make a workspace, show the person the directory, its disk use, and the alternatives. Make it only after they agree.
+   - Before you make a workspace, show the person the directory, its disk use, and the alternatives. Make it only after they agree. One exception: a follow-up experiment that the person approved in advance at the research task's review (`then:` in its task file). Publish it without a new wait, inside the approved limits only.
    - Ask before you loosen tolerances or touch root files or dependencies.
 3. **Smoke test where needed.** Before you publish a long task to a machine for the first time, run one short command there (`hostname`, `herdr --version`).
 4. **Write reports that are precise, short, and easy to understand.** Cover task, target, job id, date, status, and result.
@@ -60,7 +61,7 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 `/check` runs in a subagent and returns a short report for each task. It only looks and records. You act on the report:
 
 - `running`: nothing.
-- `done`: give the person the result. Stop the `/loop` for this task. Keep the agent. Close only when the person says so (`/close`).
+- `done`: give the person the result. Stop the `/loop` for this task. Keep the agent. Close only when the person says so (`/close`). If the task file has `then:`, publish the follow-up now without a wait (`/publish`, "Follow-up"), or stop and tell the person if one of its stop conditions is true.
 - `blocked`: tell the person what the agent asks. Stop the `/loop`. Do not send keys.
 - `idle`: for `started_by: orchard`, if the plan already answers what the agent waits for, send that answer; otherwise report. For `started_by: person`, report only.
 - `killed`, `started_by: orchard`: add 1 to `kills` in the task file. If `kills` is 2 or more, run `/fallback <task>`. Otherwise run `agent list` once yourself to make sure no agent with that name runs, then start it again (`/publish` step 7) with the prompt plus "Read the worklog first and continue from the last entry."

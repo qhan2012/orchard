@@ -149,3 +149,10 @@
 - Reading used: `files/` is an inbox. At publish, after the person agrees, the named files move to `tasks/<task>/` (next to `tasks/<task>.md`) and are copied to the workspace `files/` directory, which the harness already has. The task file keeps its path, so no other skill changes.
 - `/backup`: now also copies `README.md`, `MEMORY.md`, `memory/`, `reports/` of each running local workspace to `workspaces/<task>/`; runs also when a check reports `done`; skips files of 10 MB or more and lists them; restore leaves `workspaces/` out.
 - Verified locally with temporary directories: a file name with a space is copied; an 11 MB file is skipped and listed; the workspace copy lands in `workspaces/<task>/`; restore brings back a deleted task file and does not write `workspaces/` into the orchard root.
+
+## 21. Research before a task; follow-up with no stop (2026-11-12)
+- Question (from user): creating a task can need heavy research. Is the workflow fine? Answer: the mechanism is, but "who researches" was not written.
+- DECISION (user): add the three cases. And after heavy research, the result only updates the master; the flow does not stop for the person.
+- Change: `/publish` step 1 (plan says what, not how; subagent for facts, notes in `tasks/<task>/plan-notes.md`); new "Follow-up" section; launch card lines `From`, `Then`, `Check`; task fields `from`, `then`; `CLAUDE.md` hand-off rule, the review exception, and "After a check" `done`; `DESIGN.md` 4e; README example.
+- Guard: the follow-up starts without a wait only inside what the person approved at the research task's review. It stops if the proposal is missing, negative, outside the limits, or a check fails. `then:` is cleared at start, so it runs once.
+- Depends on a check cadence: the follow-up starts when a check sees `done`.

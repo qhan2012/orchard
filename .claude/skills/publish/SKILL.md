@@ -32,10 +32,16 @@ argument-hint: "<task>"
    Remotes:  <for research: each target and the directories to read>
    Args:     <agent_args, for example --dangerously-skip-permissions>
    Files:    <input files from files/, with total size; or none>
+   From:     <the research task whose proposal this task uses; or none>
+   Then:     <research only: the follow-up experiment approved now: target, agent, args, directory; or none>
+   Check:    <cadence; a task with Then needs one, or the follow-up cannot start by itself>
    Goal:     <one line>
    ```
    For `research`: read `tasks/*.md` to find the workspaces of the tasks to study. For a closed task, use the local copy in `reports/tasks/<task>/`. Write the list to `remotes:` in the task file.
-1. **Plan.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Fill the header and the plan. For `kind: experiment`, add these two lines to the plan Constraints:
+1. **Plan.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Fill the header and the plan.
+   Write **what** and **when it is done**: goal, success criteria, verifier, scope boundary, constraints. Do not write how. The worker researches how as its first step (the harness rule "Research prerequisites first"), and it does not stop after that research: it goes on with the task.
+   If you must learn something before you can write the plan (which target, what a fair criterion is), do not research it yourself. Send a subagent. It writes its findings and sources to `tasks/<task>/plan-notes.md` and returns a few lines. Then go on to the review screen without a stop.
+   If the research before the task needs hours, publish a `research` task with a follow-up (see "Follow-up" below). For `kind: experiment`, add these two lines to the plan Constraints:
    - "Give every scheduler job a name that starts with `<task>-`."
    - "Cancel your jobs before you write the summary."
    If the target has a `datadir`, add: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
@@ -95,5 +101,21 @@ argument-hint: "<task>"
    Never run bare `herdr`: it opens the TUI.
    **Permissions.** Workers run without permission prompts (the person's decision, `DESIGN.md` 4f), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions`. An `agent_args` entry for the kind in `targets.yaml` replaces the default. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
    For `runner: local`, the master usually runs inside the local `orchard` session, so the server is already running: skip the start. The worker gets its own herdr workspace (`--no-focus`), so the master pane does not change.
-8. **Record.** Set `status: running` in the task file. Add a worklog entry with the task, target, runner, workspace, and harness commit.
+8. **Record.** Set `status: running` in the task file. If the review set a check cadence, write it to `check:` and start the `/loop`. Add a worklog entry with the task, target, runner, workspace, and harness commit.
    After the worker's first job runs, check that the compute node sees `W` (and `datadir`). Record the result in `memory/target-<target>.md`.
+
+## Follow-up: research, then an experiment, with no stop between
+
+Use this when the person wants a `research` task to lead straight into an `experiment` ("research it, then run it on `box1`").
+
+**At the research task's review (step 3), the person approves the follow-up in advance.** Put it on the launch card (`Then:`) and collect what a later review would show: the follow-up's target, agent kind and args, and its directory with the disk facts of that target. Also show a check cadence, because the follow-up starts only when a check sees the research `done`. One answer from the person accepts both tasks. Write the approved values to `then:` in the research task file.
+
+Add to the research plan Constraints: "End the summary with a section `## Proposed task`: goal, success criteria, verifier, scope boundary, constraints for the follow-up experiment on `<target>`. Stay inside these limits: <the limits the person gave>. If the experiment is not worth doing, or needs something outside the limits, say so in that section."
+
+**When a check reports the research `done`** (`CLAUDE.md`, "After a check"), publish the follow-up at once:
+- Task name: the research task name plus `-run` (it must still fit the name rule). Set `from: <research task>`.
+- The plan is the `## Proposed task` section, as written. Input files: the research summary, copied to the follow-up's `files/`.
+- Do steps 2 and 4 to 8 as usual. Step 3: show the review screen to the person as a message, and **do not wait**.
+- Then clear `then:` in the research task file, so it cannot start twice. Tell the person in one message: research result, and that the follow-up runs.
+
+**Stop and wait for the person instead** if one of these is true: the summary has no `## Proposed task` section; the section says not to do it, or asks for something outside the approved limits (another target, another directory, more than the limits); the summary lists a blocker; a check in step 2 fails; the directory exists; or the disk facts are much worse than at approval. Do not repair the proposal yourself.
