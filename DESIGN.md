@@ -72,7 +72,7 @@ target: corp
 runner: local
 agent: claude
 started_by: orchard    # orchard | person (adopted)
-session: orchard       # herdr session of the agent
+session: default       # herdr session of the agent (local: the person's own; target: orchard)
 agent_name: moe-nan-debug
 agent_session:         # native session id, written at close
 workspace: local:/home/qh/myworks/moe-nan-debug   # where the harness is (absolute path)
@@ -361,7 +361,8 @@ asks before it closes it.
 
 ## 6a. Master inside herdr
 
-The master can run in a pane of the local herdr session `orchard`, as the
+The person starts herdr on the local machine themselves; its session is
+usually `default`. The master runs in a pane of that session, as the
 agent named `master`. Then local workers (`runner: local`) are in the same
 session: one TUI shows all of them, and herdr marks any pane that is done or
 blocked, including the master. Remote workers stay in the herdr server on
@@ -369,7 +370,10 @@ their machine; the master reaches them through `enter`. (`herdr --remote
 <host>` attaches the TUI to one remote server at a time.)
 
 Two rules follow: `/check` skips the agent `master`, and the master never
-stops the `orchard` server, because it runs in it.
+stops the local server: it runs in it, and the person's own panes are there
+too. In that session the master touches only agents that have a task file.
+On a target, the master starts its own server in a session named `orchard`,
+apart from sessions that the person runs there.
 
 ## 6b. Adopt a running agent
 

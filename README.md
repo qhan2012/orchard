@@ -13,12 +13,14 @@ ssh -o BatchMode=yes <host> true         # the master never answers a password p
 
 Workers run without permission prompts by default (`DESIGN.md` 4f). You choose the master's own permission mode when you start `claude`.
 
-Start the master inside herdr, so the master and local workers share one session and herdr tells you when any of them needs you:
+Start the master inside your own herdr (the default session is fine). The master and local workers then share that session, and herdr tells you when any of them needs you:
 
 ```bash
-herdr --session orchard                  # opens the TUI; in its first pane:
+herdr                                    # your herdr, as you start it every day; in one pane:
 cd <orchard checkout> && claude          # the master names itself `master` at start
 ```
+
+On a target, the master starts its own herdr server in a session named `orchard`, apart from sessions that you run there.
 
 Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). To choose the worker's CLI, say it ("... with codex"); otherwise the default in `targets.yaml` applies, then `claude`. Before it makes anything, the master shows one review screen (launch card, plan, directory and disk use) and waits for your OK. For example:
 

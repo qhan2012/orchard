@@ -53,7 +53,7 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 - **Do not answer an agent's approval dialog without a person.** If an agent is `blocked`, read its screen and report. Do not send keys to approve.
 - **The person decides when and how often you check.** With no cadence, check only when asked. See "After a check".
 - **Clean up only at close.** A `done` task keeps its agent. When the person closes the task, run `/close`. It closes the worker's herdr workspace. Keep the workspace directory unless the person says to remove it. Do not stop a herdr server unless the person asks; then show `agent list` and `pane list` first.
-- **Do not stop your own server.** You may run inside the local herdr session `orchard`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). If `$HERDR_SESSION` is not `orchard`, tell the person: local workers start in session `orchard`, so they will not be next to you. Never stop your server or send a prompt to `master`.
+- **You run inside the person's herdr.** The person starts herdr themselves; its session is usually `default`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). Local workers start in this same session, next to you. The session also holds the person's own panes and agents: touch only agents that have a task file here. Never stop this server, and never send a prompt to `master`.
 - **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
 
 ## After a check
