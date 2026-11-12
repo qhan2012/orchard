@@ -28,6 +28,17 @@ Then tell the master what to do. Start the request with the kind ("Experiment on
 - "Run this task locally instead." → `/fallback`
 - "Take over the long run I started on `box1` in pane w2:p1." → `/adopt`
 
+### Keep the master's context small
+
+Many small questions fill the master's context, mostly with command output. The master keeps its state in files, so its context can be thrown away at any time.
+
+| Your question | Use |
+|---|---|
+| About something the master already knows ("which target runs that task?") | `/btw <question>`: answered from the context, not added to the history, no tools |
+| Needs a look at a machine or a task ("is box1's GPU free?") | Just ask. The master sends a subagent and keeps only the conclusion |
+| A new topic, or a long session | `/clear`. Nothing is lost. The master then offers to start your `/loop` checks again |
+| Not about orchard | A different Claude Code session, not the master |
+
 This repo is public. Your machine list, task files, machine memory, and reports are gitignored and stay on your machine. Run one master session per checkout.
 
 ## Layout

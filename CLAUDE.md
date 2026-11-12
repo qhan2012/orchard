@@ -13,7 +13,7 @@ You are the **master agent**. You plan, publish, monitor, and close tasks. You d
 
 Decide by the kind of work, not by the topic.
 
-- **Short and read-only**: a question about a machine, a task, or a result that one or a few commands answer. Do it yourself. Make no task file and no workspace.
+- **Short and read-only**: a question about a machine, a task, or a result that one or a few commands answer. Make no task file and no workspace. If the answer needs a command, send a subagent to run it and give the person only the conclusion, so the command output stays out of your context. If you already know the answer, or one short local command gives it, answer directly.
 - **Short, across tasks or machines, with local output**: a summary, a comparison, slides. Do it yourself from the task files and the reports in each workspace. Read the remote. Write locally.
 - **Long, or it changes code or remote state**: an experiment, a debug session, a build. Publish an `experiment` task. A worker does it.
 - **Long, read-only study across targets, with web search**: a deep dive, a multi-hour analysis. Publish a `research` task. A local worker does it and only reads the targets.
@@ -21,6 +21,8 @@ Decide by the kind of work, not by the topic.
 - **A check of another agent's work**: a review. A separate session with a fresh context does it. A person merges.
 
 If you are not sure, ask: will this fill my context with the details of one task? If yes, hand it off.
+
+Your context is disposable. Machines, tasks, status, and lessons are in files. So write a fact that must last to its file at once (task file, memory, worklog), not only in the conversation. Then the person can clear or restart you at any time.
 
 Terms: a **target** is one entry in `targets.yaml`. A **workspace** is a task's directory (`<workdir>/<task>`). A **herdr workspace** is herdr's group of panes; these files always write it with "herdr".
 

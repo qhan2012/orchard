@@ -98,3 +98,8 @@
 - Change: `.claude/hooks/guard.py` + `.claude/settings.json` (`PreToolUse`, Bash). Three rules: deny `herdr ... send-keys`; ask before `herdr ... server stop` / `session stop`; deny forced `git add`. Left out on purpose: `scancel`, `kill`, `rm -r` (they need ownership, which is judgment).
 - Source: https://code.claude.com/docs/en/hooks (stdin fields, `hookSpecificOutput.permissionDecision`, `onFailure`, exec form with `args`). Only the first part of that page was read.
 - Verified locally: 14 sample commands through the script (7 matched as expected, 7 passed) and a non-Bash event. Not yet run inside Claude Code.
+
+## 13. Small questions and the master's context (2026-11-12)
+- Question (from user): many small questions add context to the master. Better practice?
+- DECISION (user): `CLAUDE.md`: a short read-only question that needs a command goes to a subagent, and the master keeps only the conclusion. The master's context is disposable, so lasting facts go to files at once. README: a table of habits (`/btw`, just ask, `/clear`, a different session).
+- Sources: https://code.claude.com/docs/en/interactive-mode (`/btw`: no history, no tools), https://code.claude.com/docs/en/subagents (own context, returns the summary).
