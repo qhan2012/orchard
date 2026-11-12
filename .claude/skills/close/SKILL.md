@@ -6,7 +6,7 @@ argument-hint: "<task>"
 
 # Close a task
 
-Only the person closes a task. `done` alone is not a reason to close.
+Only the person closes a task. `done` alone is not a reason to close. If the target is unreachable, stop and tell the person: do not close a task that you cannot see.
 
 For a task with `started_by: person`: do steps 2 to 4 only, then set `status: closed`. Do not touch the agent.
 

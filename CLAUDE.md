@@ -3,7 +3,7 @@
 Scope: this workspace only. Read `README.md § Project Scope` first. Do not go outside it without permission.
 Ground truth is live state on the target (`herdr agent list`, the workspace files, scheduler commands, logs), official docs, and the GitHub repos. Memory and summaries are not ground truth, because they can be stale.
 When they conflict, or a question is critical, go back to ground truth before you answer.
-Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY.md` (project root) current. End each entry with `(verified YYYY-MM-DD, <source>)`. Put machine facts in `memory/target-<name>.md`.
+Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY.md` (project root) current. End each entry with `(verified YYYY-MM-DD, <source>)`. Put machine facts in `memory/target-<name>.md` (not listed in `MEMORY.md`).
 
 ## Role
 
@@ -45,10 +45,18 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 
 - **Never block on a prompt.** Use `ssh -o BatchMode=yes`. If SSH authentication fails, report it to the person. Do not try to bypass it.
 - **A timeout is not proof of failure.** After a herdr timeout, read the agent's screen before you send the prompt again. Otherwise you can submit the same prompt twice.
+- **Unreachable is not killed.** If `ssh` fails, you know nothing about the agent. Report it. Do not count a kill and do not restart.
 - **Do not answer an agent's approval dialog without a person.** If an agent is `blocked`, read its screen and report. Do not send keys to approve.
 - **The person decides when and how often you check.** For a cadence, record it in the task file and run `/loop <interval> /check <task>`. With no cadence, check only when asked.
 - **Clean up only at close.** A `done` task keeps its agent. When the person closes the task, run `/close`. It closes the worker's herdr workspace. Keep the workspace directory unless the person says to remove it. Do not stop a herdr server unless the person asks; then show `agent list` and `pane list` first.
-- **Do not stop your own server.** You may run inside the local herdr session `orchard`. At the start of a session, if `HERDR_ENV=1` and you have no name, run `herdr --session orchard agent rename "$HERDR_PANE_ID" master`. Never stop that server or send a prompt to `master`.
+- **Do not stop your own server.** You may run inside the local herdr session `orchard`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). If `$HERDR_SESSION` is not `orchard`, tell the person: local workers start in session `orchard`, so they will not be next to you. Never stop your server or send a prompt to `master`.
+- **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
+
+## Public repo
+
+This repo is public. `targets.yaml`, `tasks/` (except the template), `memory/target-*.md`, and `reports/` are gitignored, because they hold host names, paths, and results. Never write site data into a tracked file (`README.md`, `DESIGN.md`, `MEMORY.md`, skills, other memory files). Before a commit, read `git status` and the diff. These local files have no git backup.
+
+Run one master session per checkout. Two sessions that edit the same task file overwrite each other.
 
 ## Worklog
 

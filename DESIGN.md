@@ -255,9 +255,10 @@ the `enter` prefix.
 | Status | Condition | Master does |
 |---|---|---|
 | `running` | agent is there and working | nothing |
-| `done` | summary exists | read it, report. The agent stays, for follow-up questions |
+| `done` | summary exists and the agent does not work | read it, report. The agent stays, for follow-up questions |
 | `blocked` | herdr says blocked, or worklog has `BLOCKER:` | read the screen or worklog, report. Never approve for the person |
-| `killed` | agent is gone or herdr is unreachable, and no summary | restart, `kills += 1`. Adopted agent: report only |
+| `killed` | the target is reachable, the agent is gone, and no summary | restart, `kills += 1`. Adopted agent: report only |
+| (unreachable) | `ssh` fails | not a status. Keep the old status, report. No kill count, no restart |
 | `idle` | agent is there but stopped, no summary | read the screen, decide what it waits for |
 
 Restart after a kill: start the agent again with the same short prompt plus
@@ -333,10 +334,11 @@ orchard/
 ├── CLAUDE.md             # master rules
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
-├── tasks/                # one <task>.md per task; TEMPLATE.md
+├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt
-├── memory/ + MEMORY.md
-└── reports/              # worklogs; tasks/<task>/ = records copied back at close
+├── memory/ + MEMORY.md   # target-*.md are gitignored
+├── reports/              # gitignored: worklogs; tasks/<task>/ = records copied back at close
+└── docs/history/         # worklogs of the design work (no site data)
 ```
 
 ## 8. Memory
@@ -370,3 +372,18 @@ budgets, automatic memory search. Add one only when a real need shows up.
 - herdr version: the skills are checked against herdr 0.8.2 (source and docs
   at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
 - Nothing here is verified on a real machine yet.
+
+## Known limits
+
+- Rules such as "read-only" for research workers and "do not approve for the
+  person" are instructions. No hook or sandbox enforces them.
+- A remote agent needs network access to its model API. A target without it
+  must use `runner: local`. Record this in the target's memory.
+- Login of an agent CLI cannot be checked by a command; the master asks.
+  Without `agent_args`, a long task can stop at approval prompts.
+- Resume after close needs the herdr integration of that agent on that
+  machine.
+- `/loop` ends with the master session. The master offers to start loops
+  again at the start of a session.
+- A local-runner agent edits remote code through SSH only.
+- Site data is gitignored (public repo), so it has no git backup.

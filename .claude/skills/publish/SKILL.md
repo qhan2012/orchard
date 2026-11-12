@@ -35,6 +35,7 @@ argument-hint: "<task>"
    If the target has a `datadir`, add: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
    Publish only after the person accepts the plan.
 2. **Check the target.** `ssh -o BatchMode=yes <host> true` must pass (for `research`: every target in `remotes`). If it fails, tell the person. Do not try to bypass it.
+   A remote agent needs network access to its model API. If `memory/target-<target>.md` says the target has none, use `runner: local`.
    **Check the agent CLI** where the agent will run: `command -v <cli>` (`claude` → `claude`, `codex` → `codex`, `cursor` → `cursor-agent`). Login cannot be checked the same way for every CLI: if `memory/target-<name>.md` does not say that this kind is logged in there, ask the person, then record the answer. If the CLI is missing or not logged in, stop and tell the person. Do not change to another kind yourself.
    Run `herdr --version` where the agent will run. The skills are checked against herdr 0.8.2 (memory `herdr-cli-facts`). If the version is different, check each herdr command below against that version's `cli-reference` first, and record the version in `memory/target-<target>.md`.
 3. **Review the directory with the person** (`DESIGN.md` 4a). Do this for every new workspace, on the side where the workspace will be (and for the remote work directory with `runner: local`).
@@ -62,6 +63,7 @@ argument-hint: "<task>"
    git -C W rev-parse HEAD      # must equal <sha>; write it to `harness:` in the task file
    rm -rf W/.git                # so nothing is pushed to qhan2012/harness
    ```
+   If the target cannot reach GitHub (`git fetch` fails or times out): make the same copy in a local temporary directory with the commands above, then send it: `tar -C <tmp> -cf - . | E 'mkdir W && tar -C W -xf -'`. Record "no GitHub access" in `memory/target-<target>.md`, and use this way first next time.
    Fetch by commit needs the full 40-character sha. Do not use the latest main: a new harness version comes only through a change to `HARNESS`.
    With `runner: local` and `kind: experiment`, also make the remote work directory: `E 'test -e <remote W> && echo EXISTS || mkdir -p <remote W>'`. A `research` task makes nothing on a remote.
    Write the absolute path of `W` to `workspace:` (and `remote_dir:`) in the task file.

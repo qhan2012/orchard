@@ -82,3 +82,12 @@
 - Facts (herdr v0.8.2): `agent start --kind` supports `claude`, `codex`, `cursor`; args after `--` go to the CLI; `src/agent_resume.rs` resumes claude, codex, and cursor (`cursor-agent`).
 - DECISION (user): order is the person's request, then `agent` of the entry in `targets.yaml` where the agent runs (new `local` entry for this machine), then `claude`. Optional `agent_args` per kind. `/publish` checks that the CLI is installed, asks once about login, and never changes the kind itself. `DESIGN.md` 4f.
 - The `agent_args` example for claude in `targets.example.yaml` is a commented example, not a recommendation. The person chooses the permission flags.
+
+## 11. Known issues fixed (2026-11-12)
+- Public repo: `tasks/` (except the template), `memory/target-*.md`, and `reports/` are now gitignored. Target memory files are not listed in `MEMORY.md`. The design worklogs moved to `docs/history/`. `CLAUDE.md` has a "Public repo" section.
+- `/check`: an unreachable target is not `killed`. No kill count, no restart. The agent's absence is confirmed twice before a restart.
+- `/check`: a summary plus a working agent is `running` (work after `done`).
+- `/publish`: a target without GitHub access gets the harness copy from the local machine through `tar`.
+- Master: renames itself without `--session`; warns if it is not in session `orchard`; offers to restart loops at session start; one master session per checkout.
+- Removed unused Python and Node entries from `.gitignore`.
+- Not fixed, listed in `DESIGN.md` "Known limits": rules are not enforced by a hook; login check; `agent_args`; resume needs the herdr integration; local-runner edits through SSH.
