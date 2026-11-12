@@ -91,3 +91,10 @@
 - Master: renames itself without `--session`; warns if it is not in session `orchard`; offers to restart loops at session start; one master session per checkout.
 - Removed unused Python and Node entries from `.gitignore`.
 - Not fixed, listed in `DESIGN.md` "Known limits": rules are not enforced by a hook; login check; `agent_args`; resume needs the herdr integration; local-runner edits through SSH.
+
+## 12. Guard hook (2026-11-12)
+- Question (from user): can hooks replace rules that are only instructions? Answer: partly. A hook sees the command text, not the intent or who owns a resource.
+- DECISION (user): few hooks, only for very useful and clear cases.
+- Change: `.claude/hooks/guard.py` + `.claude/settings.json` (`PreToolUse`, Bash). Three rules: deny `herdr ... send-keys`; ask before `herdr ... server stop` / `session stop`; deny forced `git add`. Left out on purpose: `scancel`, `kill`, `rm -r` (they need ownership, which is judgment).
+- Source: https://code.claude.com/docs/en/hooks (stdin fields, `hookSpecificOutput.permissionDecision`, `onFailure`, exec form with `args`). Only the first part of that page was read.
+- Verified locally: 14 sample commands through the script (7 matched as expected, 7 passed) and a non-Bash event. Not yet run inside Claude Code.

@@ -10,7 +10,7 @@ machine often kills agents, the agent runs on the local machine and does its
 work on the remote through SSH. The master can also take over an agent that
 the person started by hand.
 
-## 1. No code
+## 1. No code (one exception: section 10)
 
 The master is an agent. It can run `ssh` and `herdr` itself. So orchard is a
 harness repo, not a program: a machine list, a task directory, five Claude
@@ -336,6 +336,7 @@ orchard/
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task (gitignored); TEMPLATE.md
 ├── .claude/skills/       # publish, check, close, fallback, adopt
+├── .claude/hooks/        # guard.py: three hard rules (section 10)
 ├── memory/ + MEMORY.md   # target-*.md are gitignored
 ├── reports/              # gitignored: worklogs; tasks/<task>/ = records copied back at close
 └── docs/history/         # worklogs of the design work (no site data)
@@ -361,7 +362,27 @@ Base: the harness memory (`memory/<name>.md` with frontmatter, index in
 ## 9. Not in scope
 
 A Python package, a ledger, a fleet board, cross-model review, digests,
-budgets, automatic memory search. Add one only when a real need shows up.
+budgets, automatic memory search, hooks beyond the three in section 10. Add one only when a real need shows up.
+
+## 10. Guard hook
+
+Most rules need judgment, so they stay instructions. A hook is used only
+where a mistake is costly, cannot be undone, and shows in the command text:
+
+| Command | Decision | Why |
+|---|---|---|
+| `herdr ... agent send-keys` / `pane send-keys` | deny | this is how an approval dialog gets answered for the person |
+| `herdr ... server stop` / `session stop` | ask the person | it ends every agent in that server |
+| `git add -f` / `--force` | deny | it can publish gitignored site data from this public repo |
+
+`.claude/settings.json` registers `.claude/hooks/guard.py` as a `PreToolUse`
+hook for Bash. The script needs `python3`. `"onFailure": "block"` makes a
+broken hook stop the command instead of letting it pass; this needs Claude
+Code v2.1.295 or later.
+
+The hook matches text. A command hidden in a script file gets past it. It
+guards against a slip by the master, and it is not a security boundary. It
+does not apply to workers.
 
 ## Open points
 
@@ -375,8 +396,9 @@ budgets, automatic memory search. Add one only when a real need shows up.
 
 ## Known limits
 
-- Rules such as "read-only" for research workers and "do not approve for the
-  person" are instructions. No hook or sandbox enforces them.
+- A hook enforces three rules only, in the master session (section 10).
+  All other rules, and every rule for workers (for example "read-only" for
+  research workers), are instructions. No hook or sandbox enforces them.
 - A remote agent needs network access to its model API. A target without it
   must use `runner: local`. Record this in the target's memory.
 - Login of an agent CLI cannot be checked by a command; the master asks.
