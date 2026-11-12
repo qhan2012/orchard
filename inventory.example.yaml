@@ -21,3 +21,14 @@ nodes:
 herdr:
   session: orchard            # named herdr session orchard uses on every target
   binary: herdr
+
+fleet:
+  max_agents: 16              # attention budget: start refuses past this many live agents
+  # Local command run once per event (needs_decision, finished, ...). argv, no shell.
+  # Placeholders: {title} {body} {event} {target} {name} {status}
+  notify: ["notify-send", "{title}", "{body}"]
+  #   macOS:  ["terminal-notifier", "-title", "{title}", "-message", "{body}"]
+  #   phone:  ["curl", "-s", "-d", "{title} {body}", "https://ntfy.sh/<your-topic>"]
+  roles:                      # default agent kind per role; reviewer must differ from builder
+    builder: claude
+    reviewer: codex

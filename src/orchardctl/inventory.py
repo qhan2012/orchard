@@ -45,12 +45,22 @@ class Node:
 
 
 @dataclass
+class Fleet:
+    """How many agents one person can supervise, and how to get their attention."""
+
+    max_agents: int = 16          # attention budget across all targets
+    notify: list[str] = field(default_factory=list)  # argv template, no shell
+    roles: dict[str, str] = field(default_factory=lambda: {"builder": "claude", "reviewer": "codex"})
+
+
+@dataclass
 class Inventory:
     path: Path
     clusters: dict[str, Cluster]
     nodes: dict[str, Node]
     herdr_session: str
     herdr_binary: str
+    fleet: Fleet = field(default_factory=Fleet)
 
     def cluster(self, name: str) -> Cluster:
         try:
@@ -110,4 +120,20 @@ def parse(data: dict, path: Path = Path("<memory>")) -> Inventory:
         nodes=nodes,
         herdr_session=str(herdr.get("session", "orchard")),
         herdr_binary=str(herdr.get("binary", "herdr")),
+        fleet=parse_fleet(data.get("fleet") or {}),
     )
+
+
+def parse_fleet(f: dict) -> Fleet:
+    out = Fleet()
+    if "max_agents" in f:
+        n = f["max_agents"]
+        if not isinstance(n, int) or n < 1:
+            raise InventoryError(f"fleet.max_agents must be a positive integer, got {n!r}")
+        out.max_agents = n
+    notify = f.get("notify") or []
+    if isinstance(notify, str) or not all(isinstance(x, str) for x in notify):
+        raise InventoryError("fleet.notify must be a list of strings (argv, no shell)")
+    out.notify = list(notify)
+    out.roles = {**out.roles, **{str(k): str(v) for k, v in (f.get("roles") or {}).items()}}
+    return out

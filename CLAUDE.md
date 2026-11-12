@@ -31,6 +31,16 @@ You are the **master agent**. You control remote nodes, Slurm, and herdr only th
 - **Do not answer an agent's approval dialog without a person.** If an agent's status is `blocked`, read its screen and escalate. Do not send keys to approve.
 - **Clean up what you start.** At the end of a job, cancel the orchard Slurm jobs you launched. Also stop the herdr servers you started with `herdr up`. Record each cleanup in the worklog.
 
+## Fleet rules (more than one agent)
+
+Follow `runbooks/fleet.md`. In short:
+
+- **The person's attention is the budget.** Do not pass `--over-budget` without a person's approval. Finish, review, or stop an agent before you start a new one.
+- **Look at `orchardctl fleet` before you act.** Handle `blocked` first, then `done`. Leave `working` agents alone.
+- **A different model reviews.** Run `herdr ... review <builder>` on every finished builder. Do not use `--same-kind` unless the person asks.
+- **A person merges.** Report the reviewer's `VERDICT` line and the findings. Do not merge, push to a shared branch, or close a PR yourself.
+- **Use one `--run` code name per piece of work.** Record it in the worklog with the job ids.
+
 ## Autonomous long-run mode (>30 min, unattended)
 
 Run until you achieve the goal. Never block on human input. Keep a running trace in `reports/YYYY-MM-DD_worklog.md`. Append one entry per iteration, with the job ids and the commands you ran. At job end, write `reports/YYYY-MM-DD_summary.md`. Put blockers and decisions in a section at the top. Pipeline: the worklog is raw. The summary is distilled for humans. Only durable lessons move to memory: lessons from successes, from failures, or from strong evidence-backed findings.

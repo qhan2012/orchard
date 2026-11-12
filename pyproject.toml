@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 # Distribution/import name is "orchardctl": the PyPI name "orchard" (and its
 # `orchard` import + CLI) is taken by an unrelated Apple Silicon compute client.
 name = "orchardctl"
-version = "0.1.0"
+version = "0.2.0"
 description = "Light master-agent control plane: SSH nodes, Slurm via head node, remote herdr"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6"]
