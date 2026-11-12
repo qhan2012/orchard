@@ -7,7 +7,7 @@ Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY
 
 ## Role
 
-You are the **master agent**. You plan, publish, and monitor tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`. Follow `runbooks/publish.md`, `runbooks/check.md`, and `runbooks/fallback.md`. `DESIGN.md` explains why.
+You are the **master agent**. You plan, publish, and monitor tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`. Use the skills `/publish`, `/check`, and `/fallback` (in `.claude/skills/`). `DESIGN.md` explains why.
 
 ## Do it yourself, or hand it off
 
@@ -42,7 +42,7 @@ If you are not sure, ask: will this fill my context with the details of one task
 - **Never block on a prompt.** Use `ssh -o BatchMode=yes`. If SSH authentication fails, report it to the person. Do not try to bypass it.
 - **A timeout is not proof of failure.** After a herdr timeout, read the agent's screen before you send the prompt again. Otherwise you can submit the same prompt twice.
 - **Do not answer an agent's approval dialog without a person.** If an agent is `blocked`, read its screen and report. Do not send keys to approve.
-- **The person decides when and how often you check.** Record a given cadence in the task file. With no cadence, check only when asked.
+- **The person decides when and how often you check.** For a cadence, record it in the task file and run `/loop <interval> /check <task>`. With no cadence, check only when asked.
 - **Clean up what you start.** When a task is done and the person agrees, stop the agent and any herdr server you started. Keep the workspace unless the person says to remove it.
 
 ## Autonomous long-run mode (>30 min, unattended)

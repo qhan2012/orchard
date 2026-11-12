@@ -2,7 +2,7 @@
 
 A harness for a **master agent**. The master runs on your local machine. It plans, publishes, and monitors tasks. Each task runs in a coding agent inside [herdr](https://github.com/ogulcancelik/herdr) on a remote machine, in a workspace made from [qhan2012/harness](https://github.com/qhan2012/harness). If a remote machine often kills agents, the agent runs locally and works on the remote through SSH.
 
-There is no program here. The master uses `ssh` and `herdr` directly and follows the runbooks. Read `DESIGN.md` for the full design.
+There is no program here. The master uses `ssh` and `herdr` directly and follows three Claude Code skills. Read `DESIGN.md` for the full design.
 
 ## Quick start
 
@@ -11,11 +11,12 @@ cp targets.example.yaml targets.yaml     # edit; keep ProxyJump etc. in ~/.ssh/c
 ssh -o BatchMode=yes <host> true         # the master never answers a password prompt
 ```
 
-Then start your agent in this directory and tell it what to do, for example:
+Then start Claude Code in this directory and tell it what to do, for example:
 
-- "Plan a task on `box1`: find why the MoE run gives NaN." → `runbooks/publish.md`
-- "Check all tasks." / "Check `moe-nan-debug` every 10 minutes until done." → `runbooks/check.md`
-- "Run this task locally instead." → `runbooks/fallback.md`
+- "Plan a task on `box1`: find why the MoE run gives NaN." → `/publish`
+- "Check all tasks." → `/check`
+- "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
+- "Run this task locally instead." → `/fallback`
 
 ## Layout
 
@@ -25,7 +26,7 @@ Then start your agent in this directory and tell it what to do, for example:
 ├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
-├── runbooks/             # publish.md, check.md, fallback.md
+├── .claude/skills/       # publish, check, fallback (the procedures)
 ├── memory/ + MEMORY.md   # target-<name>.md per machine; entries end with (verified date, source)
 └── reports/              # YYYY-MM-DD_worklog.md + _summary.md
 ```
@@ -43,7 +44,7 @@ Then start your agent in this directory and tell it what to do, for example:
 **Verifier.** Run one real task through publish, check, and done on a direct node. Then one through fallback.
 
 **Scope boundary.**
-- In scope: the machine list, task files, runbooks, memory.
+- In scope: the machine list, task files, skills, memory.
 - Out of scope: any code (see `DESIGN.md` 9), installing herdr or agents on targets, changing cluster configuration, merging code.
 
 **Constraints.**

@@ -12,8 +12,9 @@ work on the remote through SSH.
 ## 1. No code
 
 The master is an agent. It can run `ssh` and `herdr` itself. So orchard is a
-harness repo, not a program: a machine list, a task directory, runbooks, and
-`CLAUDE.md`. Add a script only when the same command fails again and again.
+harness repo, not a program: a machine list, a task directory, three Claude
+Code skills (`/publish`, `/check`, `/fallback`), and `CLAUDE.md`. Skills load
+only when used, so `CLAUDE.md` stays short. Add a script only when the same command fails again and again.
 
 ## 2. Machine list: `targets.yaml`
 
@@ -155,9 +156,11 @@ Restart after a kill: start the agent again with the same short prompt plus
 README and the progress is in the worklog, so no session restore is needed.
 
 **When and how often to check is decided at runtime**, by the person ("check
-now", "check this task every 10 minutes until done"). The master records a
-given cadence in the task file (`check:`), so it continues after its own
-restart. With no cadence, it checks only when asked.
+now", "check this task every 10 minutes until done"). A cadence runs as
+`/loop <interval> /check <task>` in the master session. `/loop` stops when the
+session ends, so the master also records the cadence in the task file
+(`check:`) and, after a restart, tells the person which loops to start again.
+With no cadence, it checks only when asked.
 
 ## 6. Fallback
 
@@ -176,7 +179,7 @@ orchard/
 ├── README.md
 ├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
 ├── tasks/                # one <task>.md per task; TEMPLATE.md
-├── runbooks/             # publish.md, check.md, fallback.md
+├── .claude/skills/       # publish, check, fallback
 ├── memory/ + MEMORY.md
 └── reports/
 ```

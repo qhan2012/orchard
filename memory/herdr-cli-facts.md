@@ -1,6 +1,6 @@
 ---
 name: herdr-cli-facts
-description: herdr v0.9.5 CLI behaviour that the runbooks rely on
+description: herdr v0.9.5 CLI behaviour that the skills rely on
 type: reference
 ---
 - `--session <name>` is a global prefix and selects an independent server. (verified 2026-11-09, herdr source @ ee5bfb5 `docs/next/.../cli-reference.mdx`)
