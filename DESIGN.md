@@ -223,4 +223,5 @@ budgets, automatic memory search. Add one only when a real need shows up.
 - herdr inside a scheduler job (agent on a compute node). Today the agent
   runs on the `enter` machine or locally, and uses the scheduler from there.
 - The real `job_exec` command of the in-house scheduler.
+- herdr version: the skills are checked against herdr 0.8.2 (source and docs at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
 - Nothing here is verified on a real machine yet.

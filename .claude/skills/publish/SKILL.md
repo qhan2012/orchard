@@ -10,6 +10,7 @@ argument-hint: "<task>"
 
 1. **Plan.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Fill the header and the plan. Publish only after the person accepts the plan.
 2. **Check the target.** `ssh -o BatchMode=yes <host> true` must pass. If it fails, tell the person. Do not try to bypass it.
+   Run `herdr --version` where the agent will run. The skills are checked against herdr 0.8.2 (memory `herdr-cli-facts`). If the version is different, check each herdr command below against that version's `cli-reference` first, and record the version in `memory/target-<target>.md`.
 3. **Make the workspace** (`DESIGN.md` 4a).
    ```bash
    Read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.
