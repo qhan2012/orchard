@@ -18,7 +18,7 @@ herdr --session orchard                  # opens the TUI; in its first pane:
 cd <orchard checkout> && claude          # the master names itself `master` at start
 ```
 
-Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). The master shows a launch card (kind, where the agent runs, workspace, remotes) and waits for your OK. For example:
+Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). To choose the worker's CLI, say it ("... with codex"); otherwise the default in `targets.yaml` applies, then `claude`. The master shows a launch card (kind, where the agent runs, workspace, remotes) and waits for your OK. For example:
 
 - "Experiment on `box1`: find why the MoE run gives NaN." → `/publish`, kind `experiment`
 - "Research: compare the MoE runs on `corp` and `box1`, search for known causes, write a report." → `/publish`, kind `research` (local agent, reads the targets, web search)

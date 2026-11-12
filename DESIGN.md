@@ -34,6 +34,8 @@ corp: {enter: "ssh jumper", job_exec: "myrun --job {job} --", runner: local}
   scheduler has its own.
 - `runner`: `herdr` (agent on the machine) or `local` (agent on the local
   machine, works through `enter`).
+- `agent` (optional): the default agent kind for agents that run there.
+- `agent_args` (optional): per kind, native CLI arguments for the start.
 - `workdir` (optional): where workspaces go, `<workdir>/<task>`. Default
   `~/myworks`. It always ends in `myworks`.
 - `datadir` (optional): a place for large outputs, when the only big disk is
@@ -46,6 +48,9 @@ Machine types seen so far:
 | A: direct node | `ssh node` | on the node, or local |
 | B1: jumper that can run agents | `ssh jumper`, then the scheduler | on the jumper, or local |
 | B2: jumper for scheduler commands only | same | local only |
+
+One more entry, `local`, is this machine. It has no `enter`. It holds the
+default `agent` and `agent_args` for agents that run locally.
 
 Config goes in `targets.yaml`. Reasons and quirks go in memory (section 8).
 
@@ -176,6 +181,30 @@ changes to remote state stay in different agents.
 To start the right kind, the master does not guess. It shows the person a
 launch card first (task, kind, where the agent runs, workspace, remotes,
 goal) and waits. If the request does not say the kind, it asks.
+
+### 4f. Agent kind
+
+Which CLI runs the worker (herdr `--kind`: `claude`, `codex`, `cursor`,
+...) is decided in this order: (1) what the person says in the request;
+(2) the `agent` of the entry where the agent runs, in `targets.yaml`;
+(3) `claude`. The launch card shows it, so the person can change it.
+
+Before the start, the master checks on that machine that the CLI is
+installed (`command -v`; `cursor` is `cursor-agent`). Login is asked once
+per machine and kind, and recorded in memory. If either fails, the master
+stops. It does not change the kind itself.
+
+What changes with the kind:
+- Rules: nothing. The harness has `AGENTS.md` and `.cursorrules`, which
+  point to `CLAUDE.md`.
+- Permissions for unattended runs: each CLI has its own flags. They go in
+  `agent_args` per kind, chosen by the person, and herdr passes them after
+  `--`. Without them, a long task can stop at approval prompts (`blocked`).
+- Resume after close: herdr 0.8.2 can resume `claude`, `codex`, and
+  `cursor` from a session id, if its integration reported one.
+
+The master itself needs Claude Code, because it uses skills and `/loop`.
+Workers do not.
 
 ### Runner `local`
 

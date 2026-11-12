@@ -1,9 +1,9 @@
 ---
 task:                # short, unique, kebab-case; also the workspace directory name
 kind: experiment     # experiment (works on one target) | research (local, reads targets, web search)
-target:              # a name from targets.yaml; `local` for a research task or an adopted agent on this machine
+target:              # a name from targets.yaml (not `local`); `local` for a research task or an adopted agent on this machine
 runner:              # herdr | local (default: the target's runner)
-agent: claude        # agent kind
+agent: claude        # agent kind (herdr --kind): the person's choice, else the entry's `agent` in targets.yaml, else claude
 started_by: orchard  # orchard | person (adopted with /adopt)
 session: orchard     # herdr session; `default` is the default session
 agent_name:          # herdr agent target; default: the task name
