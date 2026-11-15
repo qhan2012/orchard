@@ -55,6 +55,7 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 - **Clean up only at close.** A `done` task keeps its agent. When the person closes the task, run `/close`. It closes the worker's herdr workspace. Keep the workspace directory unless the person says to remove it. Do not stop a herdr server unless the person asks; then show `agent list` and `pane list` first.
 - **You run inside the person's herdr.** The person starts herdr themselves; its session is usually `default`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). Local workers start in this same session, next to you. The session also holds the person's own panes and agents: touch only agents that have a task file here. Never stop this server, and never send a prompt to `master`.
 - **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
+- **herdr's own skill is a reference only.** If a herdr skill is loaded, or a herdr command fails or the version is not 0.8.2, read `docs/herdr-skill.md`: it says which rules here win and how to ask the binary for the syntax.
 
 ## After a check
 
@@ -72,7 +73,7 @@ To set a cadence: write `check: every 10m` to the task file, then start `/loop 1
 
 ## Guard hook
 
-`.claude/hooks/guard.py` checks each Bash command before it runs. It has three rules: it denies `herdr ... send-keys`, it asks the person before `herdr ... server stop` or `session stop`, and it denies a forced `git add`. If it stops a command, do not look for another way to do the same thing. Tell the person. All other rules in this file are still yours to follow: the hook does not check them.
+`.claude/hooks/guard.py` checks each Bash command before it runs. It has three rules: it denies `herdr ... send-keys`, `pane run`, and `pane send-text` (your only input to an agent is `agent prompt`), it asks the person before `herdr ... server stop` or `session stop`, and it denies a forced `git add`. If it stops a command, do not look for another way to do the same thing. Tell the person. All other rules in this file are still yours to follow: the hook does not check them.
 
 ## Public repo
 

@@ -44,16 +44,13 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    Write **what** and **when it is done**: goal, success criteria, verifier, scope boundary, constraints. Do not write how. The worker researches how as its first step (the harness rule "Research prerequisites first"), and it does not stop after that research: it goes on with the task.
    If you must learn something before you can write the plan (which target, what a fair criterion is), do not research it yourself. Send a subagent. It writes its findings and sources to `tasks/<task>/plan-notes.md` and returns a few lines. Then go on to the review screen without a stop.
    If the research before the task needs hours, publish a `research` task with a follow-up (see "Follow-up" below).
-   For `kind: experiment`, add these two lines to the plan Constraints:
-   - "Give every scheduler job a name that starts with `<task>-`."
-   - "Cancel your jobs before you write the summary."
-   If the target has a `datadir`, add: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
+   Add the standard constraints of step 5 to the plan Constraints now, so the person sees them at the review.
    The person reviews the plan in step 3.
 2. **Check the target.** `E true` must pass (for `research`: every target in `remotes`). If it fails, tell the person. Do not try to bypass it.
    A remote agent needs network access to its model API. If `memory/target-<target>.md` says the target has none, use `runner: local`.
    **Check the agent CLI** where the agent will run: `command -v <cli>` (`claude` → `claude`, `codex` → `codex`, `cursor` → `cursor-agent`). Login cannot be checked the same way for every CLI: if `memory/target-<name>.md` does not say that this kind is logged in there, ask the person, then record the answer. If the CLI is missing or not logged in, stop and tell the person. Do not change to another kind yourself.
    **Check the account** where the agent will run: `id -u`. If it is `0` (root) and the `agent_args` have `--dangerously-skip-permissions`, stop and tell the person: Claude Code is expected to refuse that flag as root. Do not start the agent to find out.
-   Run `herdr --version` where the agent will run. The skills are checked against herdr 0.8.2 (memory `herdr-cli-facts`). If the version is different, check each herdr command below against that version's `cli-reference` first, and record the version in `memory/target-<target>.md`.
+   Run `herdr --version` where the agent will run. The skills are checked against herdr 0.8.2 (memory `herdr-cli-facts`). If the version is different, check each herdr command below against the binary on that machine first: `herdr --help` lists the commands, `herdr agent` and `herdr workspace` print the syntax of each group, and `herdr --skill` prints the agent skill of that version (`docs/herdr-skill.md`). Record the version and each difference in `memory/target-<target>.md`.
 3. **Review with the person: one screen, one answer.** Do this for every new workspace. First collect the disk facts, on the side where the workspace will be (and for the remote work directory with `runner: local`).
    ```bash
    df -h ~ <workdir> 2>&1            # home and the workdir filesystem
@@ -86,6 +83,11 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    With `runner: local` and `kind: experiment`, also make the remote work directory: `E 'test -e <remote W> && echo EXISTS || mkdir -p <remote W>'`. A `research` task makes nothing on a remote.
    Write the absolute path of `W` to `workspace:` (and `remote_dir:`) in the task file.
 5. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local` and `kind: experiment`, add the `### Remote` block. For `kind: research`, add the `### Remotes (read-only)` block. Both block texts are in `blocks.md`, next to this file.
+   **Standard constraints.** The plan Constraints must have these lines. Add each one that is missing (a follow-up plan comes from a `## Proposed task` section and does not have them):
+   - Every task: "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents." A worker runs in a herdr pane, so it can reach every agent in its session; locally that session also holds the master and the person's panes.
+   - `kind: experiment`: "Give every scheduler job a name that starts with `<task>-`."
+   - `kind: experiment`: "Cancel your jobs before you write the summary."
+   - The target has a `datadir`: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
    To write a remote file: `E 'cat > W/README.md' < local-copy`.
    **Send the input files.** Copy `tasks/<task>/` into the workspace `files/` directory (the harness has it for this): on a target, `tar -C tasks/<task> -cf - . | E 'tar -C W/files -xf -'`; locally, the same without `E`. The copy in `tasks/<task>/` stays as the master's record. Add one line to the plan Constraints: "Input files are in `files/`: <names>."
 6. **Seed memory.** If `memory/target-<target>.md` exists here (for `research`: one per target in `remotes`), copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`. The harness copy has no `MEMORY.md`: make it first, with the heading `# Memory index`.
@@ -100,12 +102,15 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    herdr --session S workspace create --cwd W --no-focus --label <task>   # read .result.root_pane.pane_id
    herdr --session S agent start <task> --kind <agent> --pane <pane_id> [-- <agent_args for this kind>]
    herdr --session S agent get <task>     # read agent_status before you send the prompt
-   herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."
+   herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode." --wait --until working --timeout 15000
    ```
    On a target, each line is one remote command in single quotes, for example:
-   `E 'herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."'`
-   **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (their own herdr window for a local agent, or `herdr --remote <host> --session orchard` for a target). When the status is `idle`, send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
-   After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
+   `E 'herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode." --wait --until working --timeout 15000'`
+   **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent start` returns the error `agent_not_ready` (the agent is there and keeps its name), `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (their own herdr window for a local agent, or `herdr --remote <host> --session orchard` for a target). When the status is `idle` or `done` (both mean ready), send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
+   **The prompt must be confirmed.** `--wait --until working --timeout 15000` returns as soon as the agent is `working` (some seconds). It does not wait for the turn to end. Always use these three options together: `--wait` alone waits for hours.
+   - Exit 0, and `agent_status` in the reply is `working`: the prompt arrived.
+   - `agent_prompt_stalled` (no state change in 5 s) or `timeout`: the prompt may or may not have arrived. Read the screen (`agent read <task> --lines 40`) before you do anything else. Do not send the prompt again until the screen shows that it is not there.
+   - `agent_blocked`: herdr sent nothing. See "First-start dialog" above.
    Never run bare `herdr`: it opens the TUI.
    **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions --model claude-opus-5-5`: no permission prompts, and the model is Opus 5.5 (the person's decision). An `agent_args` entry for the kind in `targets.yaml` replaces the whole default, so it must name the model too if it wants one. If the person names another model for one task, use it for that task and show it on the launch card. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
    A local worker gets its own herdr workspace (`--no-focus`) in the person's session, so the master pane does not change. That session also holds the person's own panes and agents. Touch only the agents that have a task file here.

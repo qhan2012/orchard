@@ -456,7 +456,7 @@ where a mistake is costly, cannot be undone, and shows in the command text:
 
 | Command | Decision | Why |
 |---|---|---|
-| `herdr ... agent send-keys` / `pane send-keys` | deny | this is how an approval dialog gets answered for the person |
+| `herdr ... agent send-keys` / `pane send-keys` / `pane run` / `pane send-text` | deny | this is how an approval dialog gets answered for the person |
 | `herdr ... server stop` / `session stop` | ask the person | it ends every agent in that server |
 | `git add -f` / `--force` | deny | it can publish gitignored site data from this public repo |
 
@@ -477,6 +477,11 @@ does not apply to workers.
   by name prefix at close. Deferred.
 - herdr version: the skills are checked against herdr 0.8.2 (source and docs
   at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
+  `docs/herdr-skill.md` compares them with herdr's own agent skill and says
+  where orchard differs on purpose.
+- Helper agents for a worker (a `helpers:` field): not built. Today every
+  plan tells the worker to use herdr only inside its own herdr workspace
+  and to start no other agents (`docs/herdr-skill.md`, "Workers and herdr").
 - Nothing here is verified on a real machine yet. `docs/first-run.md` is the
   checklist that verifies it.
 
