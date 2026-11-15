@@ -74,7 +74,16 @@ If a herdr skill is loaded in your session, these orchard rules win:
 
 When a command fails with a usage error (exit 2), or the herdr version is not 0.8.2, do not guess. Ask the binary on that machine: `herdr --help`, then the group with no subcommand (`herdr agent`, `herdr pane`, `herdr workspace`). Never do this with a subcommand that changes state (`herdr workspace create` runs with defaults), and never with bare `herdr`.
 
-## Not decided here (for the person)
+## Workers and herdr (decided 2026-11-14)
 
-- **Workers and the herdr skill.** A worker runs in a herdr pane (`HERDR_ENV=1`). If a herdr skill is installed for that user on that machine, the worker can split panes and start helper agents next to itself. By the skill's default these are sibling panes in the worker's own herdr workspace, so `/close` step 5 removes them too. `/check` does not see them as tasks. No rule here allows or forbids this.
+A worker runs in a herdr pane (`HERDR_ENV=1`). So it can reach every agent in its session, with or without a herdr skill. In the local session that includes the master and the person's own panes.
+
+- **Rule.** Every plan gets this constraint (`/publish` step 5): "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents."
+- **Why no helper agents.** A helper has no task file: `/check` does not count it and nothing restarts it. It runs without permission prompts like the worker. The worker's own subagents already give parallel work, and they end with the worker.
+- **Where the rule is.** In the plan, not in qhan2012/harness: the harness is also used without orchard.
+- **It is an instruction.** No hook enforces it (the guard runs in the master only).
+- **Later, on a real need** (for example a reviewer of another agent kind): a `helpers:` field in the task file, shown on the launch card; helper names `<task>-<role>`; only in the worker's own herdr workspace; closed before the summary; `/check` counts agents with the `<task>-` prefix. Not built.
+
+## Not used
+
 - **`agent wait`.** `herdr agent wait <task> --timeout MS` could replace a short `/loop` for a local worker. Not used: a check must also read the worklog.

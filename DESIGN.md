@@ -479,9 +479,9 @@ does not apply to workers.
   at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
   `docs/herdr-skill.md` compares them with herdr's own agent skill and says
   where orchard differs on purpose.
-- Workers and the herdr skill: a worker that has a herdr skill can start
-  helper agents in its own herdr workspace. No rule yet
-  (`docs/herdr-skill.md`, "Not decided here").
+- Helper agents for a worker (a `helpers:` field): not built. Today every
+  plan tells the worker to use herdr only inside its own herdr workspace
+  and to start no other agents (`docs/herdr-skill.md`, "Workers and herdr").
 - Nothing here is verified on a real machine yet. `docs/first-run.md` is the
   checklist that verifies it.
 
