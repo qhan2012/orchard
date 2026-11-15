@@ -60,7 +60,19 @@ Two results:
 1. **Do not copy the herdr skill into this repo.** It would be a second procedure for the same commands, it would be wrong for every target with another herdr version, and its gate and layout rules contradict the design.
 2. **orchard's skills stay the procedure.** For remote control they are the only one.
 3. **Use the skill as the reference for syntax and states.** Print it where the agent runs: `herdr --skill` locally, `E 'herdr --skill'` on a target. It always matches that machine's herdr.
-4. **If a herdr skill is installed in the master's Claude Code** (for example with `npx skills add ... -g`), it can load when the person says "herdr". Then the five "orchard wins" rows above still hold. `CLAUDE.md` says so.
+4. **If a herdr skill is installed in the master's Claude Code** (for example with `npx skills add ... -g`), it can load when the person says "herdr". Then the rules below still win.
+
+## Rules for the master
+
+If a herdr skill is loaded in your session, these orchard rules win:
+
+- You control a target's herdr from an SSH shell, where `HERDR_ENV` is not set. The herdr skill says to stop there. Do not stop: this is the design.
+- A worker gets its own herdr workspace in directory `W`, not a sibling pane in your tab.
+- Send the task prompt without `--wait`. Then read `agent get`.
+- Never send keys, also where the herdr skill shows `agent send-keys`.
+- Touch only agents that have a task file here.
+
+When a command fails with a usage error (exit 2), or the herdr version is not 0.8.2, do not guess. Ask the binary on that machine: `herdr --help`, then the group with no subcommand (`herdr agent`, `herdr pane`, `herdr workspace`). Never do this with a subcommand that changes state (`herdr workspace create` runs with defaults), and never with bare `herdr`.
 
 ## Not decided here (for the person)
 
