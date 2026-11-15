@@ -1,0 +1,5 @@
+# Harness used for every task workspace. Change this line in a PR to upgrade.
+# Format: <repo url> <full commit sha>
+https://github.com/qhan2012/harness fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de
+# orchard's own CLAUDE.md is based on harness fc24f24. To see what to sync after an upgrade:
+#   git -C <harness clone> diff fc24f24 <new> -- CLAUDE.md

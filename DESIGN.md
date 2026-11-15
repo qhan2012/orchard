@@ -1,0 +1,504 @@
+# orchard design
+
+Status: agreed with the person on 2026-11-11 and 2026-11-12. This file gives the reasons. The skills in
+`.claude/skills/` are what the master follows; if they differ, the skills win. Not yet run on real machines.
+
+## 0. Goal
+
+A **master agent** on the local machine plans, publishes, and monitors tasks.
+A task runs in a coding agent inside herdr on a remote machine. If a remote
+machine often kills agents, the agent runs on the local machine and does its
+work on the remote through SSH. The master can also take over an agent that
+the person started by hand.
+
+## 1. No code (one exception: section 10)
+
+The master is an agent. It can run `ssh` and `herdr` itself. So orchard is a
+harness repo, not a program: a machine list, a task directory, six Claude
+Code skills (`/publish`, `/check`, `/close`, `/fallback`, `/adopt`,
+`/backup`), and
+`CLAUDE.md`. Skills load only when used, so `CLAUDE.md` stays short. Add a
+script only when the same command fails again and again.
+
+## 2. Machine list: `targets.yaml`
+
+One entry per machine. An entry is a **target**. Three required facts: its
+name, how to get in, and where the agent runs.
+
+```yaml
+box1: {enter: "ssh -o BatchMode=yes box1", runner: herdr}
+corp: {enter: "ssh -o BatchMode=yes jumper", job_exec: "myrun --job {job} --", runner: local}
+```
+
+- `enter`: the command prefix that runs a command on the machine. It has
+  `-o BatchMode=yes`, so `ssh` fails at once and never waits for a password.
+  The skills call it `E` and always send one quoted string: `E '<command>'`.
+- `job_exec` (optional): the command on that machine that runs a command
+  inside a scheduler job. Slurm: `srun --jobid={job} --overlap`. An in-house
+  scheduler has its own.
+- `runner`: `herdr` (agent on the machine) or `local` (agent on the local
+  machine, works through `enter`).
+- `agent` (optional): the default agent kind for agents that run there.
+- `agent_args` (optional): per kind, native CLI arguments for the start.
+- `workdir` (optional): where workspaces go, `<workdir>/<task>`. Default
+  `~/myworks`. It always ends in `myworks`.
+- `datadir` (optional): a place for large outputs, when the only big disk is
+  purged.
+
+Machine types seen so far:
+
+| Type | Get in | Agent can run |
+|---|---|---|
+| A: direct node | `ssh node` | on the node, or local |
+| B1: jumper that can run agents | `ssh jumper`, then the scheduler | on the jumper, or local |
+| B2: jumper for scheduler commands only | same | local only |
+
+One more entry, `local`, is this machine. It has no `enter`. It holds the
+default `agent` and `agent_args` for agents that run locally.
+
+Config goes in `targets.yaml`. Reasons and quirks go in memory (section 8).
+
+## 3. Task: `tasks/<task>.md`
+
+One file per task. The task name is unique and matches
+`[a-z][a-z0-9_-]{0,31}`, because it is also the workspace directory name and
+the herdr agent name.
+
+```yaml
+---
+task: moe-nan-debug
+kind: experiment       # experiment | research (4e)
+target: corp
+runner: local
+agent: claude
+started_by: orchard    # orchard | person (adopted)
+session: default       # herdr session of the agent (local: the person's own; target: orchard)
+agent_name: moe-nan-debug
+agent_session:         # native session id, written at close
+workspace: local:/home/qh/myworks/moe-nan-debug   # where the harness is (absolute path)
+remote_dir: /proj/qh/myworks/moe-nan-debug        # runner: local only
+remotes:               # research only: places to read
+files: [run.log, config.yaml]   # input files, now in tasks/moe-nan-debug/
+harness: fc24f243b4e0d96198daf6cfe5a971bc7b7fd9de   # full harness sha used
+from:                  # research task that this task follows (4e)
+then:                  # research only: follow-up approved in advance (4e)
+status: running        # planned | running | blocked | idle | killed | done | closed
+kills: 0
+unreachable: 0         # unreachable checks in a row
+check: every 10m       # set at runtime; empty = only when asked
+last_checked: 2026-11-11T21:40
+latest: iteration 3, reproducer down to 40 lines
+---
+```
+
+**Input files.** `files/` is the inbox. The person puts the files for a new
+task there (logs, configs, notes, a spec). At publish, after the person
+agrees, the master moves the files that belong to the task to
+`tasks/<task>/`, lists them in `files:`, and copies them to the workspace
+`files/` directory, which the harness has for input files. The master takes
+only the files that the person names. The copy in `tasks/<task>/` is the
+master's record.
+
+The body holds the plan draft. After publish, the plan in the workspace
+`README.md` is the source of truth. The task file is the index of where
+everything is.
+
+## 4. Publish
+
+### 4a. Choose and review the directory
+
+Where workspaces go is a property of the machine: `workdir` in
+`targets.yaml`, chosen once with the person on first use. Order of
+preference: (1) a disk that is not purged and that compute nodes can see;
+(2) home, if the quota is enough; (3) if only a purged disk has space, the
+workspace stays in home and that disk becomes `datadir` for large outputs.
+The worklog and memory are the recovery state of a task, so they do not go
+on a purged disk. Home must always keep free space: agents and herdr write
+their state there.
+
+**For every new workspace, the person reviews before the master makes it**:
+the directory, the disk use of home and `workdir`, and the alternative
+disks. Commands cannot show everything (`df` on a shared filesystem shows
+the whole filesystem, not the person's quota; purge policy; file-count quota;
+what compute nodes see), so the master asks once and records the answers in
+`memory/target-<name>.md`.
+
+### 4b. Make the workspace
+
+`W` is the workspace directory, `<workdir>/<task>`.
+
+The workspace is a copy of `qhan2012/harness` at `W`, on the side where the
+agent runs. The harness version is pinned in the `HARNESS`
+file (repo URL and full commit sha), not the latest main. So all tasks in a
+batch get the same rules, and an upgrade is a one-line PR that a person
+reviews.
+
+```bash
+test -e W && echo EXISTS      # if it exists: stop, tell the person
+git init -q W
+git -C W fetch -q --depth 1 <url> <sha>   # from HARNESS
+git -C W checkout -q FETCH_HEAD
+git -C W rev-parse HEAD       # must equal <sha>; record in the task file
+rm -rf W/.git                 # so nothing is pushed to qhan2012/harness
+```
+
+`HARNESS` also records which harness commit orchard's own `CLAUDE.md` is
+based on, so a harness upgrade shows which master rules to sync.
+
+Not used: a git submodule (orchard needs no harness files locally) or a
+vendored copy (a second copy that drifts, and must be sent to the remote).
+
+Code repos for the task go in `codebases/`, as the harness says.
+
+### 4c. Write the plan
+
+The master fills `README.md § Project Scope` in the workspace: goal, success
+criteria, verifier, scope boundary, constraints. The harness `CLAUDE.md`
+already tells the agent to read this section first. Two constraints are
+always there: every scheduler job name starts with `<task>-`, and the worker
+cancels its jobs before it writes the summary.
+
+### 4d. Start the agent
+
+The prompt is short, because the plan is in the file:
+
+> Read `README.md § Project Scope` and `CLAUDE.md`. Then do the task in autonomous long-run mode.
+
+An agent that restarts reads the same files and continues.
+
+### 4e. Task kinds
+
+Every task has its own workspace made from the harness. Two kinds:
+
+| `kind` | For | Agent and workspace | Remote access |
+|---|---|---|---|
+| `experiment` | run, build, or debug on one target | on the target, or local with a `### Remote` block | read and write on that target |
+| `research` | a deep dive across targets with web search: analysis, comparison, report | local (`target: local`, `runner: local`) | read-only on every listed target |
+
+A research worker runs locally because the local machine has web access,
+the work belongs to no single target, and a long session is safest there.
+The master knows where each task's workspace is (`tasks/*.md`; closed tasks
+have a local copy in `reports/tasks/`), so it writes the places to read into
+the plan:
+
+```markdown
+### Remotes (read-only)
+- corp: ssh -o BatchMode=yes jumper — /proj/qh/myworks/moe-nan-debug
+- box1: ssh -o BatchMode=yes box1 — /home/qh/myworks/moe-baseline
+- local copy: <orchard>/reports/tasks/moe-sweep
+- Rules:
+  - Read only. Do not run jobs, and do not change or make files on a remote.
+  - Copy only small files (reports, metrics). Do not copy checkpoints or datasets.
+  - If the analysis needs a new experiment, write the request in the report. Do not run it.
+```
+
+A new experiment that the research asks for is a separate `experiment`
+task. The person decides, and the master publishes it. So analysis and
+changes to remote state stay in different agents.
+
+**Research before a task does not stop the flow.** Three cases:
+- Research that is part of the task (how to do it): the worker does it
+  first and goes on. The master's plan says what and when it is done, not
+  how.
+- Facts that the master needs to write the plan: a subagent finds them,
+  writes `tasks/<task>/plan-notes.md`, and the master goes on to the review.
+- Hours of research first: a `research` task with a follow-up. At the
+  research task's review, the person also approves the follow-up
+  experiment (target, agent, args, directory, limits). The research summary
+  ends with a `## Proposed task` section. When a check sees `done`, the
+  master publishes the follow-up at once, shows the person what it did, and
+  does not wait. It stops and waits only if the proposal is missing, says
+  not to do it, goes outside the approved limits, or a check fails.
+
+  The follow-up starts when a check runs, so such a task needs a check
+  cadence. This is the one case where a workspace is made without a new
+  answer from the person; the answer was given in advance.
+
+To start the right kind, the master does not guess. If the request does not
+say the kind, it asks. The launch card (task, kind, where the agent runs,
+workspace, remotes, args, goal) is the first part of the one review screen
+that the person gets before anything is made: card, plan, then directory
+and disk (4a). One answer accepts all three.
+
+### 4f. Agent kind
+
+Which CLI runs the worker (herdr `--kind`: `claude`, `codex`, `cursor`,
+...) is decided in this order: (1) what the person says in the request;
+(2) the `agent` of the entry where the agent runs, in `targets.yaml`;
+(3) `claude`. The launch card shows it, so the person can change it.
+
+Before the start, the master checks on that machine that the CLI is
+installed (`command -v`; `cursor` is `cursor-agent`). Login is asked once
+per machine and kind, and recorded in memory. If either fails, the master
+stops. It does not change the kind itself.
+
+What changes with the kind:
+- Rules: nothing. The harness has `AGENTS.md` and `.cursorrules`, which
+  point to `CLAUDE.md`.
+- Permissions: workers run without permission prompts, for both task
+  kinds. This is the person's decision (2026-11-12): nobody is there to
+  answer a prompt, and a worker that stops at each command cannot do a long
+  task. For `claude` the default `agent_args` are
+  `--dangerously-skip-permissions --model claude-opus-5-5`; herdr passes
+  them after `--`. The model is Opus 5.5 for every `claude` worker (the
+  person's decision, 2026-11-12); the person can name another model for
+  one task. An entry
+  in `targets.yaml` replaces the default. Other kinds have no default: the
+  person sets their flag, and without one the worker can stop at approval
+  prompts (`blocked`).
+  What this means: a worker can run any command as the person's account on
+  that machine. "Stay inside the workspace" and "read-only" (research) are
+  instructions only. A research worker also reads web pages, so text on a
+  page could push it to run a command. The person accepted this. To limit
+  it for one target or task, set other `agent_args` there.
+- The master's permission mode is not set by this repo. The person chooses
+  it when they start the master.
+- Resume after close: herdr 0.8.2 can resume `claude`, `codex`, and
+  `cursor` from a session id, if its integration reported one.
+
+The master itself needs Claude Code, because it uses skills and `/loop`.
+Workers do not.
+
+### Runner `local`
+
+The harness follows the agent. With `runner: local`, the harness is on the
+local machine only. The remote has a plain work directory,
+`<remote workdir>/<task>`.
+
+| | Local workspace (harness) | Remote work directory (plain) |
+|---|---|---|
+| `README.md`, `CLAUDE.md`, `MEMORY.md`, `memory/`, `reports/` | yes | |
+| `codebases/` | `REPOS.md` only | the code |
+| `experiments/` | small results (metrics, summaries) | run directories, full logs |
+
+The master adds this block under Constraints in the local `README.md`
+(the text that the master uses is in `.claude/skills/publish/blocks.md`;
+this copy is an example):
+
+```markdown
+### Remote
+- Target: corp
+- Enter: ssh -o BatchMode=yes jumper
+- Job exec: myrun --job {job} --
+- Remote dir: <remote workdir>/<task>
+- Rules:
+  - Run every build, test, and experiment on the remote, through Enter.
+  - Code and full logs stay on the remote. Do not copy large files to local.
+  - Write reports and memory locally only.
+  - Do not touch anything outside Remote dir without permission.
+```
+
+A `runner: herdr` task has no such block, so the agent knows it works on its
+own machine. The harness itself does not change.
+
+Known cost: a local agent edits remote code through SSH only. If this hurts,
+add "edit locally, `rsync` to the remote" later.
+
+## 5. Monitor
+
+A check covers the open tasks: `running`, `blocked`, `idle`, `killed`. It
+uses two signals. Both runners use the same commands; `runner: herdr` adds
+the `enter` prefix.
+
+1. **Agent state in herdr**: `herdr agent list`, and `herdr agent read` when
+   needed. A local agent also runs inside a local herdr.
+2. **Harness files in the workspace**: the last entries of
+   `reports/<date>_worklog.md`, and whether `reports/<date>_summary.md`
+   exists. The harness writes the summary only at the end, so **summary
+   exists = done**.
+
+| Status | Condition | Master does |
+|---|---|---|
+| `running` | agent is there and working | nothing |
+| `done` | summary exists and the agent does not work | read it, report. The agent stays, for follow-up questions |
+| `blocked` | herdr says blocked, or worklog has `BLOCKER:` | read the screen or worklog, report. Never approve for the person |
+| `killed` | the target is reachable, the agent is gone, and no summary | restart, `kills += 1`. Adopted agent: report only |
+| (unreachable) | `ssh` fails | not a status. Keep the old status, report. No kill count, no restart |
+| `idle` | agent is there but stopped, no summary | read the screen, decide what it waits for |
+
+Restart after a kill: start the agent again with the same short prompt plus
+"Read the worklog first and continue from the last entry." The plan is in the
+README and the progress is in the worklog, so no session restore is needed.
+
+**A check runs in a subagent.** The `check` skill has `context: fork`. It
+looks, decides, writes the status to the task file, and returns a few lines
+for each task. Its command output never enters the master's context, so a
+`/loop` that checks all night does not fill it. The subagent cannot ask the
+person anything, so it does not act: restart, fallback, and answers to an
+agent are done by the master from the report (`CLAUDE.md`, "After a
+check").
+
+**When and how often to check is decided at runtime**, by the person ("check
+now", "check this task every 10 minutes until done"). A cadence runs as
+`/loop <interval> /check <task>` in the master session. `/loop` stops when the
+session ends, so the master also records the cadence in the task file
+(`check:`) and, after a restart, tells the person which loops to start again.
+With no cadence, it checks only when asked.
+
+## 5a. Close
+
+`done` and `closed` are different. At `done` the master only reports. The
+person closes a task when they have no more questions. Then the master:
+records the agent's native session id if herdr reports one (so the
+conversation can be resumed), checks that no scheduler job named
+`<task>-*` is left, copies `reports/` and memory back to the local machine,
+collects memory (section 8), and closes the worker's herdr workspace. The
+workspace directory stays.
+
+The master does not stop herdr servers. A server belongs to a machine, not
+to a task, and an idle server costs almost nothing. It stops one only when
+the person asks, after it shows what still runs there. For an adopted
+agent, close only copies the record and collects memory. It does not touch
+the agent.
+
+## 6. Fallback
+
+When `kills` reaches 2 (default; the person can also say so at any time), the
+master moves the task to `runner: local`: it makes the local harness (with
+the directory review of 4a), adds the
+`### Remote` block, copies the remote worklog and memory back, and starts a
+local agent that continues. It also sets the machine's default `runner` to
+`local` in `targets.yaml` and records the reason in memory. An adopted task
+moves only when the person asks. If the remote agent still runs, the master
+asks before it closes it.
+
+## 6a. Master inside herdr
+
+The person starts herdr on the local machine themselves; its session is
+usually `default`. The master runs in a pane of that session, as the
+agent named `master`. Then local workers (`runner: local`) are in the same
+session: one TUI shows all of them, and herdr marks any pane that is done or
+blocked, including the master. Remote workers stay in the herdr server on
+their machine; the master reaches them through `enter`. (`herdr --remote
+<host>` attaches the TUI to one remote server at a time.)
+
+Two rules follow: `/check` skips the agent `master`, and the master never
+stops the local server: it runs in it, and the person's own panes are there
+too. In that session the master touches only agents that have a task file.
+On a target, the master starts its own server in a session named `orchard`,
+apart from sessions that the person runs there.
+
+## 6b. Adopt a running agent
+
+The person can start a long-run agent by hand and then give it to the
+master. `/adopt` finds the agent (machine, herdr session, name or pane),
+names it if it has no name, and writes a task file with
+`started_by: person`. The task file also stores the agent's `session` and
+`agent_name`, because a hand-started agent is often in the default session.
+
+An adopted agent stays the person's. The master checks it and reads it, but
+prompts, restarts, stops, or moves it only when the person asks. Its
+directory may not be a harness workspace. Then a check uses the herdr state
+and the screen only, and only the person says the task is done. The master
+adds no harness files to that directory unless the person asks.
+
+## 7. Repo layout
+
+```
+orchard/
+├── DESIGN.md
+├── HARNESS               # pinned harness repo + commit for task workspaces
+├── CLAUDE.md             # master rules
+├── README.md
+├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
+├── files/                # inbox for the input files of a new task (gitignored)
+├── tasks/                # one <task>.md per task, input files in <task>/ (gitignored); TEMPLATE.md
+├── .claude/skills/       # publish, check, close, fallback, adopt, backup
+├── .claude/hooks/        # guard.py: three hard rules (section 10)
+├── memory/ + MEMORY.md   # target-*.md are gitignored
+├── reports/              # gitignored: worklogs; tasks/<task>/ = records copied back at close
+└── docs/history/         # worklogs of the design work (no site data)
+```
+
+## 8. Memory
+
+Base: the harness memory (`memory/<name>.md` with frontmatter, index in
+`MEMORY.md`). Three additions for the master:
+
+1. **One file per machine**: `memory/target-<name>.md` holds what the machine
+   is like: kills agents or not, scheduler traps, herdr version, where tools
+   are.
+2. **Evidence on each entry**: every entry ends with
+   `(verified YYYY-MM-DD, <source>)`. Machine facts go stale fast.
+3. **Two transfers between the master and a task**:
+   - *Down, at publish*: copy `memory/target-<name>.md` into the new
+     workspace `memory/` and add its index line, so the worker knows the
+     machine from the start.
+   - *Up, at close*: read the task `MEMORY.md`. Move only lessons that hold
+     across tasks into master memory (mostly into `target-<name>.md`).
+
+## 8a. Backup of the site data
+
+The site data (`targets.yaml`, task files with their input files, machine
+memory, reports) is gitignored here. The person can give, at runtime, a subfolder of a private
+GitHub repo. `/backup` copies the site data there, commits, and pushes. The
+location is in the gitignored file `backup.local`.
+
+- The master checks that the repo is private and is not this public repo.
+- A backup runs after publish, adopt, close, and fallback, when a check
+  reports `done`, and on request. It does not run after each check.
+- It also copies the plan, worklog, and memory of each running **local**
+  workspace to `workspaces/<task>/`, because that state is only on this
+  machine. A remote workspace comes back at close.
+- Files of 10 MB or more are skipped and listed for the person.
+- A backup never removes files, and a restore never overwrites files. So a
+  mistake on one side does not destroy the other side.
+
+## 9. Not in scope
+
+A Python package, a ledger, a fleet board, cross-model review, digests,
+budgets, automatic memory search, hooks beyond the three in section 10. Add one only when a real need shows up.
+
+## 10. Guard hook
+
+Most rules need judgment, so they stay instructions. A hook is used only
+where a mistake is costly, cannot be undone, and shows in the command text:
+
+| Command | Decision | Why |
+|---|---|---|
+| `herdr ... agent send-keys` / `pane send-keys` / `pane run` / `pane send-text` | deny | this is how an approval dialog gets answered for the person |
+| `herdr ... server stop` / `session stop` | ask the person | it ends every agent in that server |
+| `git add -f` / `--force` | deny | it can publish gitignored site data from this public repo |
+
+`.claude/settings.json` registers `.claude/hooks/guard.py` as a `PreToolUse`
+hook for Bash. The script needs `python3`. `"onFailure": "block"` makes a
+broken hook stop the command instead of letting it pass; this needs Claude
+Code v2.1.295 or later.
+
+The hook matches text. A command hidden in a script file gets past it. It
+guards against a slip by the master, and it is not a security boundary. It
+does not apply to workers.
+
+## Open points
+
+- herdr inside a scheduler job (agent on a compute node). Today the agent
+  runs on the `enter` machine or locally, and uses the scheduler from there.
+- The in-house scheduler: its real `job_exec` command, and how to list jobs
+  by name prefix at close. Deferred.
+- herdr version: the skills are checked against herdr 0.8.2 (source and docs
+  at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
+  `docs/herdr-skill.md` compares them with herdr's own agent skill and says
+  where orchard differs on purpose.
+- Helper agents for a worker (a `helpers:` field): not built. Today every
+  plan tells the worker to use herdr only inside its own herdr workspace
+  and to start no other agents (`docs/herdr-skill.md`, "Workers and herdr").
+- Nothing here is verified on a real machine yet. `docs/first-run.md` is the
+  checklist that verifies it.
+
+## Known limits
+
+- A hook enforces three rules only, in the master session (section 10).
+  All other rules, and every rule for workers (for example "read-only" for
+  research workers), are instructions. No hook or sandbox enforces them.
+- A remote agent needs network access to its model API. A target without it
+  must use `runner: local`. Record this in the target's memory.
+- Login of an agent CLI cannot be checked by a command; the master asks.
+- Workers skip permission prompts (4f). For kinds other than `claude`, the
+  person must set the flag in `agent_args`.
+- Resume after close needs the herdr integration of that agent on that
+  machine.
+- `/loop` ends with the master session. The master offers to start loops
+  again at the start of a session.
+- A local-runner agent edits remote code through SSH only.
+- Site data is gitignored (public repo). It has a backup only after the
+  person gives a location (section 8a).

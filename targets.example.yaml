@@ -1,0 +1,35 @@
+# Copy to targets.yaml (gitignored) and edit. See DESIGN.md section 2.
+# Put ProxyJump, User, IdentityFile in ~/.ssh/config, not here.
+# Test first: ssh -o BatchMode=yes <host> true
+# enter:   the command prefix that runs a command on the machine. Keep `-o BatchMode=yes` in it,
+#          so that ssh fails at once and never waits for a password.
+# workdir: where task workspaces go, <workdir>/<task>. Default ~/myworks. Must end in myworks.
+#          /publish reviews it with you and writes it here on first use.
+# datadir: optional, for large outputs when the only big disk is purged.
+# agent:   optional default agent kind for agents that run on this entry (herdr --kind). Default: claude.
+# agent_args: optional, per kind: native CLI arguments passed after `--` at start.
+#          Default for claude workers: ["--dangerously-skip-permissions", "--model", "claude-opus-5-5"]
+#          (no permission prompts; model Opus 5.5). An entry here replaces the whole default. Other kinds have no default: set their flag here.
+
+local:                      # this machine: research tasks and runner: local agents
+  agent: claude
+  # agent_args:
+  #   claude: ["--dangerously-skip-permissions", "--model", "claude-opus-5-5"]   # the default; write another value to change it
+  #   codex: [...]                                 # no default: you choose
+
+box1:                       # type A: direct node
+  enter: "ssh -o BatchMode=yes box1"
+  runner: herdr
+
+hpc1:                       # type B1: jumper that can run agents, Slurm
+  enter: "ssh -o BatchMode=yes hpc1-login"
+  job_exec: "srun --jobid={job} --overlap"
+  runner: herdr
+  agent: codex              # default agent kind on this target
+
+corp:                       # type B2: jumper for scheduler commands only, in-house scheduler
+  enter: "ssh -o BatchMode=yes corp-jumper"
+  job_exec: "myrun --job {job} --"
+  runner: local
+  workdir: /proj/<user>/myworks       # not purged, seen on compute nodes
+  datadir: /scratch/<user>/myworks    # purged after N days: large outputs only

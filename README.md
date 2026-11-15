@@ -1,88 +1,88 @@
 # orchard
 
-Orchestration for agents: a light control plane for a **master agent**. The master runs on your local machine. It can:
+A harness for a **master agent**. The master runs on your local machine. It plans, publishes, monitors, and closes tasks. Each task runs in a coding agent inside [herdr](https://github.com/ogulcancelik/herdr) on a remote machine, in a workspace made from [qhan2012/harness](https://github.com/qhan2012/harness). If a remote machine often kills agents, the agent runs locally and works on the remote through SSH.
 
-- check SSH nodes (load, memory, GPU, herdr),
-- submit and manage Slurm jobs. The local machine has no Slurm, so every Slurm command runs on the cluster **head node** over SSH,
-- start and control [herdr](https://github.com/ogulcancelik/herdr) sessions on a plain node or inside a Slurm job.
-
-```
-local (master agent) ──ssh──► head node ── sbatch / squeue / sacct / scancel
-        │                         │
-        │                         └─ srun --jobid=J --overlap ─► compute node: herdr server + agents
-        └──ssh──► plain node ─► herdr server + agents
-```
-
-The Python package and CLI are named `orchardctl`. The name `orchard` on PyPI belongs to an unrelated project, which also claims the `orchard` import and CLI.
+There is no program here. The master uses `ssh` and `herdr` directly and follows six Claude Code skills. Read `DESIGN.md` for the full design.
 
 ## Quick start
 
 ```bash
-pip install -e '.[dev]'
-cp inventory.example.yaml inventory.yaml      # edit hosts; keep ProxyJump etc. in ~/.ssh/config
-ssh -o BatchMode=yes <head> true              # orchard never prompts for a password
-pytest -q                                     # offline tests (fake transport)
-
-orchardctl node box1
-orchardctl slurm hpc1 queue
-orchardctl slurm hpc1 launch-herdr --opt time=02:00:00 --wait 600   # -> job_id
-orchardctl herdr --cluster hpc1 --job <id> start rev --kind claude --cwd '~/proj'
-orchardctl herdr --cluster hpc1 --job <id> prompt rev "Run the tests and report." --timeout-ms 600000
-orchardctl herdr --cluster hpc1 --job <id> read rev --lines 200
-orchardctl slurm hpc1 cancel <id>
-
-orchardctl session adopt --node box1 --note "my manual run"   # a herdr session you started yourself
-orchardctl session list
+cp targets.example.yaml targets.yaml     # edit; keep ProxyJump etc. in ~/.ssh/config
+ssh -o BatchMode=yes <host> true         # the master never answers a password prompt
 ```
 
-## Session registry
+Workers run without permission prompts by default (`DESIGN.md` 4f). You choose the master's own permission mode when you start `claude`.
 
-`state/sessions.json` records each herdr session the master knows, with `started_by`:
+Start the master inside your own herdr (the default session is fine). The master and local workers then share that session, and herdr tells you when any of them needs you:
 
-- `orchard`: `slurm launch-herdr` and `herdr up` record these. orchard can stop them.
-- `user`: you started it. Register it with `session adopt`. The master can watch it and send prompts, but `herdr down` refuses to stop it without `--force`.
+```bash
+herdr                                    # your herdr, as you start it every day; in one pane:
+cd <orchard checkout> && claude          # the master names itself `master` at start
+```
 
-`herdr down` also refuses a session that is not in the registry. `slurm cancel` marks the sessions of that job as ended. `session forget <id>` deletes a stale record and changes nothing on the target. The registry is a local record, not live state: check the target (`slurm status`, `herdr status`) for ground truth.
+On a target, the master starts its own herdr server in a session named `orchard`, apart from sessions that you run there.
 
-Every command prints JSON on stdout. On an error, it prints `{"error", "message"}` on stderr and exits with code 1. See `runbooks/` for the standard procedures.
+Then tell the master what to do. Start the request with the kind ("Experiment on ...", "Research: ..."). To choose the worker's CLI, say it ("... with codex"); otherwise the default in `targets.yaml` applies, then `claude`. Before it makes anything, the master shows one review screen (launch card, plan, directory and disk use) and waits for your OK. For example:
+
+- "Experiment on `box1`: find why the MoE run gives NaN. Use `files/run.log` and `files/config.yaml`." → `/publish`, kind `experiment`. Put a task's input files in `files/` first; the master moves them to `tasks/<task>/` and copies them to the worker
+- "Research: compare the MoE runs on `corp` and `box1`, search for known causes, write a report." → `/publish`, kind `research` (local agent, reads the targets, web search)
+- "Research why the MoE runs give NaN, then run the fix on `box1`. Check every 15 minutes." → a `research` task with a follow-up `experiment`. You approve both at one review; the experiment starts by itself when the research is done
+- "Check all tasks." → `/check`
+- "Check `moe-nan-debug` every 10 minutes until done." → `/loop 10m /check moe-nan-debug`
+- "Close `moe-nan-debug`." → `/close`
+- "Run this task locally instead." → `/fallback`
+- "Take over the long run I started on `box1` in pane w2:p1." → `/adopt`
+
+Before the first real task, do `docs/first-run.md` (about 15 minutes). It checks each thing that this repo has not yet seen on a live machine.
+
+### Keep the master's context small
+
+Many small questions fill the master's context, mostly with command output. The master keeps its state in files, so its context can be thrown away at any time.
+
+| Your question | Use |
+|---|---|
+| About something the master already knows ("which target runs that task?") | `/btw <question>`: answered from the context, not added to the history, no tools |
+| Needs a look at a machine or a task ("is box1's GPU free?") | Just ask. The master sends a subagent and keeps only the conclusion |
+| A new topic, or a long session | `/clear`. Nothing is lost. The master then offers to start your `/loop` checks again |
+| Not about orchard | A different Claude Code session, not the master |
+
+This repo is public. Your machine list, task files, machine memory, and reports are gitignored and stay on your machine. To back them up, give the master a subfolder of a private repo: "Back up to `<clone path or repo URL>` `<subfolder>`" (`/backup`). Run one master session per checkout.
 
 ## Layout
 
 ```
 .
-├── src/orchardctl/
-│   ├── transport.py   # SSHTransport (system OpenSSH), SrunTransport (into a running job via head)
-│   ├── inventory.py   # load + check inventory.yaml
-│   ├── slurm.py       # SlurmAdapter: submit / queue / job / cancel / wait_running; ownership tag
-│   ├── registry.py    # session registry: which herdr sessions exist and who started each
-│   ├── herdr.py       # HerdrClient: server up/down/status, agents, start, prompt, wait, read, keys
-│   └── cli.py         # orchardctl entry point (JSON out)
-├── tests/             # offline tests with a fake transport
-├── runbooks/          # procedures the master agent follows
-├── inventory.example.yaml
-├── reports/           # YYYY-MM-DD_worklog.md + _summary.md
-├── memory/ + MEMORY.md
-├── state/             # runtime state (gitignored); sessions.json is the session registry
-└── CLAUDE.md          # canonical agent instructions (AGENTS.md, .cursorrules point here)
+├── DESIGN.md             # the design, section by section
+├── HARNESS               # pinned harness repo + commit used for every task workspace
+├── CLAUDE.md             # master rules (AGENTS.md, .cursorrules point here)
+├── targets.yaml          # machine list (gitignored; see targets.example.yaml)
+├── files/                # inbox (gitignored): put the files for a new task here
+├── tasks/                # one <task>.md per task, its input files in <task>/ (gitignored); TEMPLATE.md
+├── .claude/skills/       # publish, check, close, fallback, adopt, backup (the procedures)
+├── .claude/hooks/        # guard.py + ../settings.json: three hard rules (needs python3)
+├── memory/ + MEMORY.md   # target-<name>.md per machine (gitignored); entries end with (verified date, source)
+├── reports/              # gitignored: YYYY-MM-DD_worklog.md; tasks/<task>/ = records copied back by /close
+└── docs/                 # first-run.md (do this first); history/ = worklogs of the design work
 ```
 
 ## Project Scope
 
-**Goal.** A master agent can bring up, watch, drive and tear down remote coding-agent sessions (herdr) on SSH nodes and Slurm clusters from one local machine, safely and reproducibly.
+**Goal.** From one local machine, a master agent plans, publishes, monitors, and closes agent tasks on remote machines. It moves a task to a local agent when the remote kills agents, and it can take over an agent that the person started.
 
 **Success criteria.**
-1. From a clean checkout and a valid inventory, `launch-herdr`, then `herdr start`, then `prompt`, then `read`, then `cancel` works end to end on a real cluster.
-2. orchard never cancels or kills a job or process it did not start, unless a person confirms it (`--force`).
-3. Each action is one auditable shell command (`-v` logs it).
+1. Publish: after the person reviews the launch card, the plan, and the directory with its disk use, a task gets a workspace at `<workdir>/<task>/` (default `~/myworks/<task>/`) made from the harness, with the plan in `README.md § Project Scope`, and an agent that starts from it.
+2. Monitor: a check gives the right status (`running`, `done`, `blocked`, `idle`, `killed`) from herdr and the workspace files.
+3. Close: when the person closes a done task, its record is copied back, its lessons are in master memory, and its agent is closed. The workspace directory stays.
+4. Fallback: after two kills, the task continues with a local agent from the last worklog entry.
+5. Adopt: the master can monitor an agent that the person started by hand, and changes it only when the person asks.
+6. The master never stops or changes something it did not start, unless the person confirms it.
 
-**Verifier.** `pytest -q` (offline). `runbooks/smoke-test.md` on a real head node (online).
+**Verifier.** Run one real task through publish, check, done, and close on a direct node. Then one through fallback, and one through adopt.
 
 **Scope boundary.**
-- In scope: SSH nodes, Slurm through the head node, herdr CLI control.
-- Out of scope for v0.1: other schedulers (PBS, LSF, K8s), a long-running daemon, a web UI, installing herdr on targets, and changing cluster configuration.
+- In scope: the machine list, task files, skills, memory.
+- Out of scope: any code except the guard hook (see `DESIGN.md` 9 and 10), installing herdr or agents on targets, changing cluster configuration, merging code.
 
 **Constraints.**
-- Local machine has no Slurm.
-- Python ≥ 3.10.
-- The only runtime dependency is PyYAML.
+- The local machine has no scheduler. Scheduler commands run on the head or jumper.
 - SSH uses the system `ssh`, so `~/.ssh/config` applies as is.

@@ -1,15 +1,34 @@
 ---
 name: herdr-cli-facts
-description: herdr v0.9.5 CLI behaviour that orchard relies on
+description: herdr v0.8.2 CLI behaviour that the skills rely on (the version the person uses)
 type: reference
 ---
-Source: github.com/ogulcancelik/herdr @ ee5bfb5 (2026-10-29), `skills/herdr/SKILL.md`, `docs/next/website/src/content/docs/cli-reference.mdx`.
+The person uses herdr 0.8.2. (stated 2026-11-11)
+Source for every line below: github.com/herdrdev/herdr (before: ogulcancelik/herdr) tag `v0.8.2`, `docs/versions/0.8.2/.../cli-reference.mdx` and `src/`. Checked against the source, not against a running herdr. (verified 2026-11-11)
 
-- `--session <name>` is a global prefix and selects an independent server.
-- `herdr server` runs the headless server in the foreground. The server ignores SIGHUP. Stop it with `herdr server stop` or SIGTERM.
-- Control commands print JSON on stdout. On a timeout or server error, they print JSON on stderr and exit 1. Usage errors exit 2.
-- `workspace create --cwd P --no-focus` returns `.result.root_pane.pane_id`. `agent start NAME --kind K --pane ID` needs a pane where the shell is at its prompt.
-- Agent states: `idle` and `done` mean ready. `blocked` means an approval or question UI is open. `unknown` does not prove that the work completed.
-- A timeout does not prove that a prompt was not delivered. Read the agent's output before you retry.
-- `herdr --machine` uses only saved profiles. orchard does not use it. It runs `herdr` on the target over SSH or srun.
-- Do not run bare `herdr`, because it launches the TUI.
+- `--session <name>` is removed from the arguments before any command runs (`src/session.rs` `configure_from_args`), so it works as a prefix on control commands such as `herdr --session orchard agent list`. (verified 2026-11-11, v0.8.2 source)
+- `herdr server` runs the headless server in the foreground. Stop it with `herdr server stop`. `herdr status server` shows its status. The 0.8.2 docs say nothing about SIGHUP, so start it with `setsid nohup ... &`. (verified 2026-11-11, v0.8.2 docs)
+- `workspace create [--cwd PATH] [--label TEXT] [--no-focus]` returns the root pane as `.result.root_pane.pane_id`. (verified 2026-11-11, v0.8.2 docs)
+- `agent start <name> --kind KIND --pane ID [--timeout MS]` needs a pane whose shell is at its prompt. The timeout must be more than 3000 and at most 300000 ms (default 30000). Names match `[a-z][a-z0-9_-]{0,31}`. Kinds include `claude`, `codex`, `opencode`. (verified 2026-11-11, v0.8.2 docs)
+- `agent prompt <target> <text> [--wait] [--until STATUS] [--timeout MS]`. If the agent is `blocked`, it returns `agent_blocked` and sends nothing. With `--wait`, no activity in 5 s gives `agent_prompt_stalled`. (verified 2026-11-11, v0.8.2 docs)
+- `agent list` prints `.result.agents[]` with `name`, `agent` (kind), `agent_status`, `pane_id`, `cwd`, `state_change_seq`. (verified 2026-11-11, v0.8.2 `src/api/schema/agents.rs`)
+- `agent_status` is one of `idle`, `working`, `blocked`, `done`, `unknown`. `idle` and `done` mean ready. `blocked` means an approval or question UI is open. `unknown` does not prove the work completed. (verified 2026-11-11, v0.8.2 `src/api/schema/common.rs` and docs)
+- `agent rename <target> <name>|--clear` names an already detected agent. A name is cleared when the agent exits. (verified 2026-11-11, v0.8.2 docs)
+- `session list [--json]` lists sessions. `--session default` selects the default session explicitly (`src/session.rs` `normalize_name`). (verified 2026-11-11, v0.8.2 source)
+- `workspace close <workspace_id>` and `pane close <pane_id>` exist. There is no `agent stop`. `pane list [--workspace ID]` lists panes, with or without an agent. (verified 2026-11-11, v0.8.2 docs)
+- `agent get` and `agent list` include `agent_session` only when an official herdr integration reported a native session reference. herdr can resume claude, codex, and cursor (executable `cursor-agent`) from it (`src/agent_resume.rs`). (verified 2026-11-11, v0.8.2 docs and source)
+- After a server restart, processes are gone. herdr restores layout and cwd; the agent conversation returns only with native agent session restore. (verified 2026-11-11, v0.8.2 docs `session-state`)
+- `agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N]`. Without `--lines`, recent sources read 80 rows. (verified 2026-11-11, v0.8.2 docs)
+- A timeout or server error prints JSON on stderr and exits 1. Usage errors exit 2. A timeout does not prove that a prompt was not delivered. (verified 2026-11-11, v0.8.2 docs)
+- The CLI chooses the server in this order: `--session` on the command line, then `$HERDR_SOCKET_PATH`, then `$HERDR_SESSION`, then the default session (`src/session.rs` `configure_from_args`, `active_api_socket_path`). herdr sets `HERDR_SOCKET_PATH` in every pane (`src/integration/env.rs` `apply_pane_base_env`). So inside a pane, a plain `herdr ...` reaches the pane's own session, and an explicit `--session` with another name goes to another server with no error. Not confirmed on a live herdr. (verified 2026-11-14, v0.8.2 source)
+- Do not run bare `herdr`: it opens the TUI. (verified 2026-11-11, v0.8.2 docs)
+- Not in 0.8.2 docs: `herdr machine` (saved SSH profiles). The skills do not use it. (verified 2026-11-11, v0.8.2 docs)
+- `herdr --skill` prints the agent skill that is compiled into the binary (`src/main.rs`, `include_str!("../skills/herdr/SKILL.md")`). The skill covers only the session of the pane that the agent runs in: its first rule is to stop if `HERDR_ENV` is not `1`. (verified 2026-11-14, v0.8.2 source)
+- A command group with no subcommand prints its syntax: `herdr agent`, `herdr pane`, `herdr workspace`, `herdr tab`, `herdr session`. A subcommand that changes state runs with defaults if its arguments are left out (`herdr workspace create`). (verified 2026-11-14, v0.8.2 `skills/herdr/SKILL.md`)
+- `agent start` returns the error `agent_not_ready` at once if the agent is `blocked` during startup. The agent keeps its name, so `agent read` works. (verified 2026-11-14, v0.8.2 `src/cli/agent.rs` and skill)
+- `done` is `idle` that nobody has seen in a focused herdr UI. A CLI read does not mark it seen. When an agent finishes work, herdr marks it seen only if its pane is in the server's active tab and the outer terminal is not known to be unfocused (`active_tab_suppresses_notifications`); otherwise it is `done`. The first workspace made in an empty server becomes the active one, also with `--no-focus` (`src/app/creation.rs`). So on a target with no UI attached, the first worker finishes as `idle` and later workers finish as `done`. (verified 2026-11-14, v0.8.2 `src/app/actions.rs`, `src/app/creation.rs`, and skill)
+- `agent prompt` checks for a stalled prompt (`agent_prompt_stalled`) only with `--wait`. `--wait` with no `--timeout` waits without limit. (verified 2026-11-14, v0.8.2 `src/cli/spec.rs`)
+- If `agent read` with more `--lines` shows no more of a reply, the agent draws on the terminal's alternate screen, and herdr has no scrollback for it. (verified 2026-11-14, v0.8.2 skill)
+- `agent get` and `agent list` include `workspace_id` and `tab_id`. Closed pane and tab IDs are not used again. (verified 2026-11-14, v0.8.2 `src/api/schema/agents.rs` and skill)
+- `agent prompt <target> <text> --wait --until working --timeout 15000` confirms delivery: from a state that is not `working`, herdr first needs a state change in 5000 ms (else `agent_prompt_stalled`), then returns at once if the new state is in `--until`. `--until` takes `idle`, `working`, `blocked`, `done`, `unknown`, and needs `--wait`. With a `--timeout` of 5000 or less, the error is `timeout`, not `agent_prompt_stalled`. (verified 2026-11-14, v0.8.2 `src/api/wait.rs` `prompt_agent`, `src/cli/spec.rs`)
+- `pane run <pane_id> <command>` and `pane send-text` write text to a pane's terminal, also when an agent is in it. `agent attach --takeover` and `terminal session control` give interactive control. (verified 2026-11-14, v0.8.2 `src/cli/spec.rs`)

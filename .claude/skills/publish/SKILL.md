@@ -1,0 +1,134 @@
+---
+name: publish
+description: "Publish a task: choose and review the workspace directory, make the workspace from qhan2012/harness under myworks/<task>, write the plan into its README, seed memory, and start the worker agent in herdr. Use when the person asks to plan, start, or publish a task on a target."
+argument-hint: "<task>"
+---
+
+# Publish a task
+
+This skill has all that you need. `DESIGN.md` gives the reasons; do not load it to run a task.
+
+`E` is the target's `enter` command. Remote form: put the whole remote command in single quotes, `E '<command>'` (`CLAUDE.md`, Remote-control rules). With `runner: herdr`, the workspace is on the target: put `E` in front of each workspace command. With `runner: local`, the workspace is local: run the commands as they are.
+
+`W` is the workspace directory: `<workdir>/<task>`. `<workdir>` is the target's `workdir` in `targets.yaml`. The default is `~/myworks`. The last part of `<workdir>` is always `myworks`.
+
+**One review, not three.** Steps 0 to 2 collect facts and make nothing but the draft `tasks/<task>.md`. Step 3 shows the person one review screen (launch card, plan, directory and disk) and waits once. Ask earlier only if you cannot go on: the kind is not clear, or a check in step 2 fails.
+
+0. **Decide the kind.** Every task gets its own workspace made from the harness. The kind decides where it is and what the worker may do.
+
+   | The person wants | `kind` | Agent and workspace | Remote access |
+   |---|---|---|---|
+   | To run, build, or debug something on one target | `experiment` | on the target (`runner: herdr`), or local if the target kills agents (`runner: local`) | read and write on that target |
+   | To study results from one or more targets, with web search; a deep dive, a comparison, a report | `research` | local (`target: local`, `runner: local`) | read-only, on every target in `remotes` |
+
+   If the request does not say which, ask. Do not guess.
+   **Task name.** It is also the herdr agent name, so it must match `[a-z][a-z0-9_-]{0,31}`: a lowercase letter first, then lowercase letters, digits, `_`, or `-`, 32 characters at most. It must not be `master`, and no `tasks/<task>.md` may exist. If the person's name does not fit, propose one that does.
+   **Agent kind** (herdr `--kind`: `claude`, `codex`, `cursor`, ...). Take the first that applies: (1) what the person said in the request; (2) `agent` of the place where the agent runs, in `targets.yaml` (the target, or the `local` entry for `runner: local` and `research`); (3) `claude`. Write it to `agent:` in the task file.
+   **Input files.** The person puts files for a new task in `files/` (the inbox). Use the files that the person names. If they name none and `files/` is not empty, list what is there and ask which belong to this task. Do not guess, and do not take files that they did not name. Do not move anything yet.
+   Prepare the launch card. It is part of the review screen in step 3. Leave out a line that has no value (`Remotes`, `Files`, `From`, `Then`, `Check`):
+   ```
+   Task:     <task>
+   Kind:     experiment | research
+   Agent:    <agent kind>, runs on <target | local>
+   Workspace: <where>:<workdir>/<task>
+   Remotes:  <for research: each target and the directories to read>
+   Args:     <agent_args, for example --dangerously-skip-permissions --model claude-opus-5-5>
+   Files:    <input files from files/, with total size; or none>
+   From:     <the research task whose proposal this task uses; or none>
+   Then:     <research only: the follow-up experiment approved now: target, agent, args, directory; or none>
+   Check:    <cadence; a task with Then needs one, or the follow-up cannot start by itself>
+   Goal:     <one line>
+   ```
+   For `research`: read `tasks/*.md` to find the workspaces of the tasks to study. For a closed task, use the local copy in `reports/tasks/<task>/`. Write the list to `remotes:` in the task file.
+1. **Plan.** Copy `tasks/TEMPLATE.md` to `tasks/<task>.md`. Fill the header and the plan.
+   Write **what** and **when it is done**: goal, success criteria, verifier, scope boundary, constraints. Do not write how. The worker researches how as its first step (the harness rule "Research prerequisites first"), and it does not stop after that research: it goes on with the task.
+   If you must learn something before you can write the plan (which target, what a fair criterion is), do not research it yourself. Send a subagent. It writes its findings and sources to `tasks/<task>/plan-notes.md` and returns a few lines. Then go on to the review screen without a stop.
+   If the research before the task needs hours, publish a `research` task with a follow-up (see "Follow-up" below).
+   Add the standard constraints of step 5 to the plan Constraints now, so the person sees them at the review.
+   The person reviews the plan in step 3.
+2. **Check the target.** `E true` must pass (for `research`: every target in `remotes`). If it fails, tell the person. Do not try to bypass it.
+   A remote agent needs network access to its model API. If `memory/target-<target>.md` says the target has none, use `runner: local`.
+   **Check the agent CLI** where the agent will run: `command -v <cli>` (`claude` → `claude`, `codex` → `codex`, `cursor` → `cursor-agent`). Login cannot be checked the same way for every CLI: if `memory/target-<name>.md` does not say that this kind is logged in there, ask the person, then record the answer. If the CLI is missing or not logged in, stop and tell the person. Do not change to another kind yourself.
+   **Check the account** where the agent will run: `id -u`. If it is `0` (root) and the `agent_args` have `--dangerously-skip-permissions`, stop and tell the person: Claude Code is expected to refuse that flag as root. Do not start the agent to find out.
+   Run `herdr --version` where the agent will run. The skills are checked against herdr 0.8.2 (memory `herdr-cli-facts`). If the version is different, check each herdr command below against the binary on that machine first: `herdr --help` lists the commands, `herdr agent` and `herdr workspace` print the syntax of each group, and `herdr --skill` prints the agent skill of that version (`docs/herdr-skill.md`). Record the version and each difference in `memory/target-<target>.md`.
+3. **Review with the person: one screen, one answer.** Do this for every new workspace. First collect the disk facts, on the side where the workspace will be (and for the remote work directory with `runner: local`).
+   ```bash
+   df -h ~ <workdir> 2>&1            # home and the workdir filesystem
+   quota -s 2>/dev/null              # can be empty; shared filesystems need a site command
+   du -sh <workdir> 2>/dev/null      # what myworks already uses
+   df -h -x tmpfs -x devtmpfs        # other mounted disks = alternative locations
+   ```
+   Then show the person one review screen, in this order:
+   - the launch card from step 0
+   - the plan from step 1 (the five items)
+   - the directory you will make: `W`
+   - disk use: size, used, free, and quota if known, for home and for `<workdir>`
+   - alternatives: other writable disks, each as `<disk>/$USER/myworks`, with free space and what memory `target-<target>` says about them (purged? backed up? seen on compute nodes?)
+   - your recommendation, in this order: (1) a disk that is not purged and that compute nodes can see; (2) home, if the quota is enough; (3) if only a purged disk has space: workspace in home, and that disk as `datadir`.
+
+   Wait for the person's answer. One "yes" accepts the card, the plan, and the directory. If they change one part, show only that part again. Do not make the directory before they agree. If they say no to the task, delete the draft `tasks/<task>.md`. The input files are still in `files/`.
+   Home must keep free space in every case: the agent and herdr write their state under home.
+   **First use of a target** (no `workdir` in `targets.yaml`): also ask what commands cannot show: the quota command for shared filesystems, the file-count quota, the purge policy, and if compute nodes see the same path. Write the choice to `targets.yaml` (`workdir`, optional `datadir`) and the reasons to `memory/target-<target>.md`. For a new disk: `mkdir -p <workdir> && chmod 700 <workdir>`.
+4. **Make the workspace.** First move the task's input files out of the inbox: `mkdir -p tasks/<task> && mv files/<name> ... tasks/<task>/` (the directory can exist already, with `plan-notes.md`). Write their names to `files:` in the task file. Then read `<url> <sha>` from the one non-comment line of `HARNESS` in this repo.
+   ```bash
+   test -e W && echo EXISTS     # EXISTS: stop and tell the person
+   git init -q W
+   git -C W fetch -q --depth 1 <url> <sha>
+   git -C W checkout -q FETCH_HEAD
+   git -C W rev-parse HEAD      # must equal <sha>; write it to `harness:` in the task file
+   rm -rf W/.git                # so nothing is pushed to qhan2012/harness
+   ```
+   If the target cannot reach GitHub (`git fetch` fails or times out): make the same copy in a local temporary directory with the commands above, then send it: `tar -C <tmp> -cf - . | E 'mkdir W && tar -C W -xf -'`. Record "no GitHub access" in `memory/target-<target>.md`, and use this way first next time.
+   Fetch by commit needs the full 40-character sha. Do not use the latest main: a new harness version comes only through a change to `HARNESS`.
+   With `runner: local` and `kind: experiment`, also make the remote work directory: `E 'test -e <remote W> && echo EXISTS || mkdir -p <remote W>'`. A `research` task makes nothing on a remote.
+   Write the absolute path of `W` to `workspace:` (and `remote_dir:`) in the task file.
+5. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local` and `kind: experiment`, add the `### Remote` block. For `kind: research`, add the `### Remotes (read-only)` block. Both block texts are in `blocks.md`, next to this file.
+   **Standard constraints.** The plan Constraints must have these lines. Add each one that is missing (a follow-up plan comes from a `## Proposed task` section and does not have them):
+   - Every task: "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents." A worker runs in a herdr pane, so it can reach every agent in its session; locally that session also holds the master and the person's panes.
+   - `kind: experiment`: "Give every scheduler job a name that starts with `<task>-`."
+   - `kind: experiment`: "Cancel your jobs before you write the summary."
+   - The target has a `datadir`: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
+   To write a remote file: `E 'cat > W/README.md' < local-copy`.
+   **Send the input files.** Copy `tasks/<task>/` into the workspace `files/` directory (the harness has it for this): on a target, `tar -C tasks/<task> -cf - . | E 'tar -C W/files -xf -'`; locally, the same without `E`. The copy in `tasks/<task>/` stays as the master's record. Add one line to the plan Constraints: "Input files are in `files/`: <names>."
+6. **Seed memory.** If `memory/target-<target>.md` exists here (for `research`: one per target in `remotes`), copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`. The harness copy has no `MEMORY.md`: make it first, with the heading `# Memory index`.
+7. **Start the agent in herdr** (see memory `herdr-cli-facts`). `S` is the herdr session:
+   - On a target: `orchard`. Orchard starts this server itself, so it stays apart from sessions that the person runs there.
+   - Locally: the session that you run in. The person starts that herdr, and by default its name is `default`. Use `$HERDR_SESSION` if it is set; if `HERDR_ENV=1` and it is empty, use `default`. The server runs already: do not start one.
+   - Locally, when you are not inside herdr (`HERDR_ENV` is not `1`): `orchard`, and start the server if there is none.
+
+   Set `session: S` and `agent_name: <task>` in the task file.
+   ```bash
+   herdr --session S status server      # only for S = orchard, if no server: setsid nohup herdr --session orchard server > ~/.orchard-herdr.log 2>&1 < /dev/null &
+   herdr --session S workspace create --cwd W --no-focus --label <task>   # read .result.root_pane.pane_id
+   herdr --session S agent start <task> --kind <agent> --pane <pane_id> [-- <agent_args for this kind>]
+   herdr --session S agent get <task>     # read agent_status before you send the prompt
+   herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode." --wait --until working --timeout 15000
+   ```
+   On a target, each line is one remote command in single quotes, for example:
+   `E 'herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode." --wait --until working --timeout 15000'`
+   **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent start` returns the error `agent_not_ready` (the agent is there and keeps its name), `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (their own herdr window for a local agent, or `herdr --remote <host> --session orchard` for a target). When the status is `idle` or `done` (both mean ready), send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
+   **The prompt must be confirmed.** `--wait --until working --timeout 15000` returns as soon as the agent is `working` (some seconds). It does not wait for the turn to end. Always use these three options together: `--wait` alone waits for hours.
+   - Exit 0, and `agent_status` in the reply is `working`: the prompt arrived.
+   - `agent_prompt_stalled` (no state change in 5 s) or `timeout`: the prompt may or may not have arrived. Read the screen (`agent read <task> --lines 40`) before you do anything else. Do not send the prompt again until the screen shows that it is not there.
+   - `agent_blocked`: herdr sent nothing. See "First-start dialog" above.
+   Never run bare `herdr`: it opens the TUI.
+   **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions --model claude-opus-5-5`: no permission prompts, and the model is Opus 5.5 (the person's decision). An `agent_args` entry for the kind in `targets.yaml` replaces the whole default, so it must name the model too if it wants one. If the person names another model for one task, use it for that task and show it on the launch card. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
+   A local worker gets its own herdr workspace (`--no-focus`) in the person's session, so the master pane does not change. That session also holds the person's own panes and agents. Touch only the agents that have a task file here.
+8. **Record.** Set `status: running` in the task file. If the review set a check cadence, write it to `check:` and start the `/loop`. Add a worklog entry with the task, target, runner, workspace, and harness commit.
+   After the worker's first job runs, check that the compute node sees `W` (and `datadir`). Record the result in `memory/target-<target>.md`.
+
+## Follow-up: research, then an experiment, with no stop between
+
+Use this when the person wants a `research` task to lead straight into an `experiment` ("research it, then run it on `box1`").
+
+**At the research task's review (step 3), the person approves the follow-up in advance.** Put it on the launch card (`Then:`) and collect what a later review would show: the follow-up's target, agent kind and args, and its directory with the disk facts of that target. Also show a check cadence, because the follow-up starts only when a check sees the research `done`. One answer from the person accepts both tasks. Write the approved values to `then:` in the research task file.
+
+Add to the research plan Constraints: "End the summary with a section `## Proposed task`: goal, success criteria, verifier, scope boundary, constraints for the follow-up experiment on `<target>`. Stay inside these limits: <the limits the person gave>. If the experiment is not worth doing, or needs something outside the limits, say so in that section."
+
+**When a check reports the research `done`** (`CLAUDE.md`, "After a check"), publish the follow-up at once:
+- Task name: the research task name plus `-run`. Check at the research task's review that this name fits the name rule (so the research name has 28 characters at most) and is free. Set `from: <research task>`.
+- The plan is the `## Proposed task` section, as written. Input files: the research summary, copied to the follow-up's `files/`.
+- Do steps 2 and 4 to 8 as usual. Step 3: show the review screen to the person as a message, and **do not wait**.
+- Then clear `then:` in the research task file, so it cannot start twice. Tell the person in one message: research result, and that the follow-up runs.
+
+**Stop and wait for the person instead** if one of these is true: the summary has no `## Proposed task` section; the section says not to do it, or asks for something outside the approved limits (another target, another directory, more than the limits); the summary lists a blocker; a check in step 2 fails; the directory exists; or the disk facts are much worse than at approval. Do not repair the proposal yourself.

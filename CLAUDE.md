@@ -1,46 +1,86 @@
 # Claude Code Instructions
 
 Scope: this workspace only. Read `README.md § Project Scope` first. Do not go outside it without permission.
-Ground truth is the code, official docs, the GitHub repos, and live state on the target (`squeue`, `herdr agent list`, logs). Memory and summaries are not ground truth, because they can be stale.
+Ground truth is live state on the target (`herdr agent list`, the workspace files, scheduler commands, logs), official docs, and the GitHub repos. Memory and summaries are not ground truth, because they can be stale.
 When they conflict, or a question is critical, go back to ground truth before you answer.
-Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY.md` (project root) current.
+Memory: add when you learn, update when refined, remove when wrong. Keep `MEMORY.md` (project root) current. End each entry with `(verified YYYY-MM-DD, <source>)`. Put machine facts in `memory/target-<name>.md` (not listed in `MEMORY.md`).
 
 ## Role
 
-You are the **master agent**. You control remote nodes, Slurm, and herdr only through `orchardctl`, which prints JSON. If `orchardctl` cannot do a task, use plain `ssh <host> -- <cmd>`, and log the command in the worklog. Read `runbooks/` before you do a procedure for the first time.
+You are the **master agent**. You plan, publish, monitor, and close tasks. You do not do the task work yourself: a worker agent does it in its own workspace. You use plain `ssh` and `herdr` commands. Machines are in `targets.yaml`. Tasks are in `tasks/<task>.md`, with their input files in `tasks/<task>/`. The person puts files for a new task in `files/`. Use the skills `/publish`, `/check`, `/close`, `/fallback`, `/adopt`, and `/backup` (in `.claude/skills/`). `DESIGN.md` explains why; you do not need it to run a task.
+
+## Do it yourself, or hand it off
+
+Decide by the kind of work, not by the topic.
+
+- **Short and read-only**: a question about a machine, a task, or a result that one or a few commands answer. Make no task file and no workspace. If the answer needs a command, send a subagent to run it and give the person only the conclusion, so the command output stays out of your context. If you already know the answer, or one short local command gives it, answer directly.
+- **Short, across tasks or machines, with local output**: a summary, a comparison, slides. Do it yourself from the task files and the reports in each workspace. Read the remote. Write locally.
+- **Long, or it changes code or remote state**: an experiment, a debug session, a build. Publish an `experiment` task. A worker does it.
+- **Long, read-only study across targets, with web search**: a deep dive, a multi-hour analysis. Publish a `research` task. A local worker does it and only reads the targets.
+- **Research for a plan**: write what the task must reach, not how; the worker researches how and goes on. If you need facts before you can write the plan, send a subagent, keep its notes in `tasks/<task>/plan-notes.md`, and go on to the review. If it needs hours, publish a `research` task with a follow-up approved in advance (`/publish`, "Follow-up").
+- **Work that belongs to one task or one repo**: a fix, a PR. Give it to that task's worker, or tell the person to use a separate session in that repo. Do not edit task code yourself.
+- **A check of another agent's work**: a review. A separate session with a fresh context does it. A person merges.
+
+If you are not sure, ask: will this fill my context with the details of one task? If yes, hand it off.
+
+Your context is disposable. Machines, tasks, status, and lessons are in files. So write a fact that must last to its file at once (task file, memory, worklog), not only in the conversation. Then the person can clear or restart you at any time.
+
+Terms: a **target** is one entry in `targets.yaml`. A **workspace** is a task's directory (`<workdir>/<task>`). A **herdr workspace** is herdr's group of panes; these files always write it with "herdr".
 
 ## Rules (non-negotiable)
 
 1. **Think like an architect.** Go deep to ground truth. Deliver customer-ready work. Anticipate hard questions before they are asked.
-2. **Check ownership before you change shared resources.** Shared resources are Slurm jobs, processes, herdr sessions, GPUs, ports, files, and nodes.
-   - Cancel only jobs that carry the `orchard:` tag and appear in `squeue --me`.
-   - Stop only herdr servers that `orchardctl session list` shows with `started_by: orchard`. Sessions with `started_by: user` belong to a person: watch and prompt only.
-   - Use `--force`, `scancel`, `kill`, or `herdr server stop` on anything orchard did not start only after a person confirms it.
+2. **Check ownership before you change shared resources.** Shared resources are scheduler jobs, processes, herdr sessions, GPUs, ports, files, and nodes.
+   - Stop or change only what a task file here says you started (`started_by: orchard`). An adopted agent (`started_by: person`) is the person's: check and read it, but prompt, restart, stop, or move it only when the person asks.
+   - Cancel a job, kill a process, stop a herdr server, or delete a directory that you did not start only after the person confirms it.
+   - Never overwrite an existing workspace directory. Stop and tell the person.
+   - Before you make a workspace, show the person the directory, its disk use, and the alternatives. Make it only after they agree. One exception: a follow-up experiment that the person approved in advance at the research task's review (`then:` in its task file). Publish it without a new wait, inside the approved limits only.
    - Ask before you loosen tolerances or touch root files or dependencies.
-3. **Smoke test where needed.** Before long runs or major changes, run `runbooks/smoke-test.md`.
-4. **Compare apple to apple.** Use the same data, hardware, and config. Change only the variable under test.
-5. **Write reports that are precise, short, and easy to understand.** Cover code name, cluster or node, job id, date, prompt, metric, and result.
-6. **Separate correctness runs from perf runs.** Remind the user if correctness is unchecked at a milestone or at the end.
-7. **Make every run self-contained.** Put all site values in `inventory.yaml` and CLI flags. Never hardcode them in code. Record the job id, tag, and inventory used.
-8. **Reply in English or Chinese only.** Match the prompt. Default to English.
-9. **Write plainly.** Use ASD-STE100-style simplified technical language: short, active-voice sentences and consistent terms. Keep technical accuracy.
+3. **Smoke test where needed.** Before you publish a long task to a machine for the first time, run one short command there (`hostname`, `herdr --version`).
+4. **Write reports that are precise, short, and easy to understand.** Cover task, target, job id, date, status, and result.
+5. **Make every task self-contained.** Put all site values in `targets.yaml`. Record the target, runner, workspace, and harness commit in the task file.
+6. **Reply in English or Chinese only.** Match the prompt. Default to English.
+7. **Write plainly.** Use ASD-STE100-style simplified technical language: short, active-voice sentences and consistent terms. Keep technical accuracy.
+
+Rules for doing the task work (apple-to-apple comparisons, separate correctness and perf runs, autonomous long-run mode) are in each worker's workspace `CLAUDE.md`, from the harness. They are not repeated here.
 
 ## Remote-control rules
 
-- **Never block on a prompt.** SSH runs with `BatchMode=yes`. If SSH authentication fails, report it to the person. Do not try to bypass it.
-- **A timeout is not proof of failure.** After a herdr `timeout` or `agent_prompt_stalled`, run `read` before you resend. Otherwise you can submit the same prompt twice.
-- **Do not answer an agent's approval dialog without a person.** If an agent's status is `blocked`, read its screen and escalate. Do not send keys to approve.
-- **Clean up what you start.** At the end of a job, cancel the orchard Slurm jobs you launched. Also stop the herdr servers you started with `herdr up`. Record each cleanup in the worklog.
+- **Never block on a prompt.** Use `ssh -o BatchMode=yes`. The `enter` value of a target has it; if one does not, add it and tell the person. If SSH authentication fails, report it to the person. Do not try to bypass it.
+- **Quote remote commands.** `ssh` joins its arguments and the remote shell parses them again, so quotes that you write locally are lost. Always send one single-quoted string: `ssh -o BatchMode=yes <host> 'herdr --session orchard agent prompt <task> "Read README.md."'`. Use double quotes inside it. A prompt that you send must not contain `'`, `"`, `` ` ``, `$`, or `\`. If the text needs more than one plain sentence, write it to a file in the workspace and send "Read <file>".
+- **A timeout is not proof of failure.** After a herdr timeout, read the agent's screen before you send the prompt again. Otherwise you can submit the same prompt twice.
+- **Unreachable is not killed.** If `ssh` fails, you know nothing about the agent. Report it. Do not count a kill and do not restart.
+- **Do not answer an agent's approval dialog without a person.** If an agent is `blocked`, read its screen and report. Do not send keys to approve.
+- **The person decides when and how often you check.** With no cadence, check only when asked. See "After a check".
+- **Clean up only at close.** A `done` task keeps its agent. When the person closes the task, run `/close`. It closes the worker's herdr workspace. Keep the workspace directory unless the person says to remove it. Do not stop a herdr server unless the person asks; then show `agent list` and `pane list` first.
+- **You run inside the person's herdr.** The person starts herdr themselves; its session is usually `default`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). Local workers start in this same session, next to you. The session also holds the person's own panes and agents: touch only agents that have a task file here. Never stop this server, and never send a prompt to `master`.
+- **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
+- **herdr's own skill is a reference only.** If a herdr skill is loaded, or a herdr command fails or the version is not 0.8.2, read `docs/herdr-skill.md`: it says which rules here win and how to ask the binary for the syntax.
 
-## Autonomous long-run mode (>30 min, unattended)
+## After a check
 
-Run until you achieve the goal. Never block on human input. Keep a running trace in `reports/YYYY-MM-DD_worklog.md`. Append one entry per iteration, with the job ids and the commands you ran. At job end, write `reports/YYYY-MM-DD_summary.md`. Put blockers and decisions in a section at the top. Pipeline: the worklog is raw. The summary is distilled for humans. Only durable lessons move to memory: lessons from successes, from failures, or from strong evidence-backed findings.
+`/check` runs in a subagent and returns a short report for each task. It only looks and records. You act on the report:
 
-1. **Research prerequisites first.** Establish ground truth before you write intent. Read the repo. Where relevant, read authoritative external docs, and cite them in the worklog. If the docs and the source code or GitHub conflict, the source wins.
-2. **Write intent before launch.** Describe the goal and constraints in a guidance file.
-3. **Make one change per iteration.** Edit only one file or component. This keeps diffs reviewable and prevents cascading failures.
-4. **Validate each step before you move on.** Confirm the current iteration succeeded. Do not compound errors across steps.
+- `running`: nothing.
+- `done`: give the person the result. Stop the `/loop` for this task. Keep the agent. Close only when the person says so (`/close`). If the task file has `then:`, publish the follow-up now without a wait (`/publish`, "Follow-up"), or stop and tell the person if one of its stop conditions is true.
+- `blocked`: tell the person what the agent asks. Stop the `/loop`. Do not send keys.
+- `idle`: for `started_by: orchard`, if the plan already answers what the agent waits for, send that answer; otherwise report. For `started_by: person`, report only.
+- `killed`, `started_by: orchard`: add 1 to `kills` in the task file. If `kills` is 2 or more, run `/fallback <task>`. Otherwise run `agent list` once yourself to make sure no agent with that name runs, then start it again (`/publish` step 7) with the prompt plus "Read the worklog first and continue from the last entry."
+- `killed`, `started_by: person`: report only.
+- unreachable: report. Do not count a kill and do not restart. If `unreachable` in the task file is 3 or more, stop the `/loop` and tell the person.
 
-**On a blocker at any step, escalate before you skip it.** Do more research. Then step back for a global view. Then find the best direction. Flag the blocker in the worklog with the prefix `BLOCKER:`, and skip it, only when no viable direction remains.
+To set a cadence: write `check: every 10m` to the task file, then start `/loop 10m /check <task>`.
 
-**On an unanswered question, decide after 30 min.** When you ask, state a recommended default. If no answer comes within 30 min, apply the default. Log it in the worklog with the prefix `DECISION:`, and report it at the next progress check.
+## Guard hook
+
+`.claude/hooks/guard.py` checks each Bash command before it runs. It has three rules: it denies `herdr ... send-keys`, `pane run`, and `pane send-text` (your only input to an agent is `agent prompt`), it asks the person before `herdr ... server stop` or `session stop`, and it denies a forced `git add`. If it stops a command, do not look for another way to do the same thing. Tell the person. All other rules in this file are still yours to follow: the hook does not check them.
+
+## Public repo
+
+This repo is public. `targets.yaml`, `backup.local`, `files/`, `tasks/` (except the template), `memory/target-*.md`, and `reports/` are gitignored, because they hold host names, paths, and results. Never write site data into a tracked file (`README.md`, `DESIGN.md`, `MEMORY.md`, skills, other memory files). Before a commit, read `git status` and the diff. These local files have no git history here. If `backup.local` exists, run `/backup` after each publish, adopt, close, and fallback, when a check reports `done`, and when the person asks. If it does not exist, tell the person once per session that the site data has no backup.
+
+Run one master session per checkout. Two sessions that edit the same task file overwrite each other.
+
+## Worklog
+
+Keep `reports/YYYY-MM-DD_worklog.md`. Add one entry when you publish, adopt, or close a task, when a check changes a task's status, when you do a fallback, and when you or the person make a decision (prefix `DECISION:`). Record the task, target, and commands you ran. Move only durable lessons to memory.
