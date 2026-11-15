@@ -100,13 +100,15 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    herdr --session S workspace create --cwd W --no-focus --label <task>   # read .result.root_pane.pane_id
    herdr --session S agent start <task> --kind <agent> --pane <pane_id> [-- <agent_args for this kind>]
    herdr --session S agent get <task>     # read agent_status before you send the prompt
-   herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."
+   herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode." --wait --until working --timeout 15000
    ```
    On a target, each line is one remote command in single quotes, for example:
-   `E 'herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode."'`
+   `E 'herdr --session S agent prompt <task> "Read README.md § Project Scope and CLAUDE.md. Then do the task in autonomous long-run mode." --wait --until working --timeout 15000'`
    **First-start dialog.** A new directory often makes the agent ask a question before it accepts input (trust this folder, log in, choose a mode). Then `agent start` returns the error `agent_not_ready` (the agent is there and keeps its name), `agent_status` is `blocked`, and herdr refuses the prompt (`agent_blocked`). Do not send keys. Read the screen (`agent read <task> --lines 40`), tell the person what it asks, and ask them to answer it in the herdr TUI (their own herdr window for a local agent, or `herdr --remote <host> --session orchard` for a target). When the status is `idle` or `done` (both mean ready), send the prompt. Record in `memory/target-<target>.md` what this agent kind asks at first start there.
-   After the prompt, run `agent get <task>` once more: the status must be `working`. If it is not, read the screen before you do anything else.
-   Do not add `--wait` to this prompt: the turn takes hours. Without `--wait`, herdr does not report a stalled prompt, so this `agent get` is the only proof that the prompt arrived.
+   **The prompt must be confirmed.** `--wait --until working --timeout 15000` returns as soon as the agent is `working` (some seconds). It does not wait for the turn to end. Always use these three options together: `--wait` alone waits for hours.
+   - Exit 0, and `agent_status` in the reply is `working`: the prompt arrived.
+   - `agent_prompt_stalled` (no state change in 5 s) or `timeout`: the prompt may or may not have arrived. Read the screen (`agent read <task> --lines 40`) before you do anything else. Do not send the prompt again until the screen shows that it is not there.
+   - `agent_blocked`: herdr sent nothing. See "First-start dialog" above.
    Never run bare `herdr`: it opens the TUI.
    **Permissions.** Workers run without permission prompts (the person's decision), both `experiment` and `research`. For `claude`, the default `agent_args` are `--dangerously-skip-permissions --model claude-opus-5-5`: no permission prompts, and the model is Opus 5.5 (the person's decision). An `agent_args` entry for the kind in `targets.yaml` replaces the whole default, so it must name the model too if it wants one. If the person names another model for one task, use it for that task and show it on the launch card. For another kind with no `agent_args`, start without them and tell the person that the agent can stop at approval prompts; do not guess a flag. Show the arguments on the launch card (`Args:` line).
    A local worker gets its own herdr workspace (`--no-focus`) in the person's session, so the master pane does not change. That session also holds the person's own panes and agents. Touch only the agents that have a task file here.

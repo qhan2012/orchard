@@ -32,9 +32,9 @@ So for a remote worker, the skill gives no permission and no procedure. orchard'
 | Syntax authority | The installed binary: `herdr --help`, then `herdr agent`, `herdr pane`, ... | `/publish` step 2 said: check against the `cli-reference` of that version | **Take the skill's rule.** It needs no network and it cannot be the wrong version |
 | IDs | Read them from the JSON reply. Do not predict them | Reads `.result.root_pane.pane_id`, `workspace_id` | Same |
 | Start | `agent start <name> --kind K --pane ID [-- args]`. Blocked at startup: `agent_not_ready`, the name stays | Same command. The text said only "`agent_status` is `blocked`" | **Add the error code** to `/publish` step 7 |
-| Prompt | `agent prompt <name> "..." --wait --timeout MS` for normal work | `agent prompt` with no `--wait`, then `agent get` must say `working` | **orchard wins.** A worker turn takes hours, and `--wait` over SSH holds the connection. The cost: no `agent_prompt_stalled` check, so the `agent get` after the prompt stays mandatory |
+| Prompt | `agent prompt <name> "..." --wait --timeout MS` for normal work | `agent prompt ... --wait --until working --timeout 15000` | **Neither as written.** The skill's `--wait` waits for the turn to end; a worker turn takes hours, and over SSH that holds the connection. No `--wait` gives no proof of delivery. `--until working` returns in seconds and keeps the `agent_prompt_stalled` check (`src/api/wait.rs` `prompt_agent`) |
 | Blocked agent | Read the UI, **ask the user** before you answer it | Read the screen, report. Never send keys | Same intent. orchard is stricter |
-| `send-keys` | Allowed (`esc`, `ctrl+c`) | The guard hook denies it | **orchard wins** |
+| Input to an agent's terminal | `agent send-keys` allowed (`esc`, `ctrl+c`); `pane run` and `pane send-text` for raw panes | The guard hook denies `send-keys`, `pane run`, and `pane send-text`. `agent prompt` is the only input | **orchard wins.** Cost: the master cannot interrupt a worker; it can only close it |
 | `idle` and `done` | `done` = idle that nobody has seen in a focused UI. A CLI read does not mark it seen | `/check`: "there but stopped" | Same. On a target with no UI attached, the worker in the server's active tab (the first workspace made) finishes as `idle`, and every other worker finishes as `done`. Treat both as "ready" |
 | Read output | `--source recent-unwrapped --lines N`. If more lines show no more text, the agent uses the alternate screen: ask it to write the reply to a file | `/check` and `/adopt` read with `recent-unwrapped` | Same read. `/check` must not prompt, so it uses the worklog instead of the file fallback. This is why the harness worklog is the first signal |
 | Close | Do not close what you did not create | Rule 2 and `/close` step 5 | Same |
@@ -68,8 +68,8 @@ If a herdr skill is loaded in your session, these orchard rules win:
 
 - You control a target's herdr from an SSH shell, where `HERDR_ENV` is not set. The herdr skill says to stop there. Do not stop: this is the design.
 - A worker gets its own herdr workspace in directory `W`, not a sibling pane in your tab.
-- Send the task prompt without `--wait`. Then read `agent get`.
-- Never send keys, also where the herdr skill shows `agent send-keys`.
+- Send the task prompt with `--wait --until working --timeout 15000`, never with `--wait` alone.
+- `agent prompt` is your only input to an agent. Never use `send-keys`, `pane run`, or `pane send-text`, also where the herdr skill shows them.
 - Touch only agents that have a task file here.
 
 When a command fails with a usage error (exit 2), or the herdr version is not 0.8.2, do not guess. Ask the binary on that machine: `herdr --help`, then the group with no subcommand (`herdr agent`, `herdr pane`, `herdr workspace`). Never do this with a subcommand that changes state (`herdr workspace create` runs with defaults), and never with bare `herdr`.

@@ -73,7 +73,7 @@ To set a cadence: write `check: every 10m` to the task file, then start `/loop 1
 
 ## Guard hook
 
-`.claude/hooks/guard.py` checks each Bash command before it runs. It has three rules: it denies `herdr ... send-keys`, it asks the person before `herdr ... server stop` or `session stop`, and it denies a forced `git add`. If it stops a command, do not look for another way to do the same thing. Tell the person. All other rules in this file are still yours to follow: the hook does not check them.
+`.claude/hooks/guard.py` checks each Bash command before it runs. It has three rules: it denies `herdr ... send-keys`, `pane run`, and `pane send-text` (your only input to an agent is `agent prompt`), it asks the person before `herdr ... server stop` or `session stop`, and it denies a forced `git add`. If it stops a command, do not look for another way to do the same thing. Tell the person. All other rules in this file are still yours to follow: the hook does not check them.
 
 ## Public repo
 

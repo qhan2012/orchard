@@ -456,7 +456,7 @@ where a mistake is costly, cannot be undone, and shows in the command text:
 
 | Command | Decision | Why |
 |---|---|---|
-| `herdr ... agent send-keys` / `pane send-keys` | deny | this is how an approval dialog gets answered for the person |
+| `herdr ... agent send-keys` / `pane send-keys` / `pane run` / `pane send-text` | deny | this is how an approval dialog gets answered for the person |
 | `herdr ... server stop` / `session stop` | ask the person | it ends every agent in that server |
 | `git add -f` / `--force` | deny | it can publish gitignored site data from this public repo |
 

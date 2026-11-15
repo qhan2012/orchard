@@ -15,9 +15,10 @@ import sys
 
 RULES = [
     # (decision, pattern, reason)
-    ("deny", r"\bherdr\b[^;&|]*\b(agent|pane)\s+send-keys\b",
-     "orchard guard: the master does not send keys to an agent. A blocked agent "
-     "waits for the person. Read its screen and report."),
+    ("deny", r"\bherdr\b[^;&|]*\b((agent|pane)\s+send-keys|pane\s+(run|send-text))\b",
+     "orchard guard: the master does not send keys or raw text to a pane. "
+     "`agent prompt` is the only input. A blocked agent waits for the person. "
+     "Read its screen and report."),
     ("ask", r"\bherdr\b[^;&|]*\b(server|session)\s+stop\b",
      "orchard guard: this stops a herdr server and every agent in it. "
      "Only the person decides this."),
