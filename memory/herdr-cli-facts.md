@@ -4,7 +4,7 @@ description: herdr v0.8.2 CLI behaviour that the skills rely on (the version the
 type: reference
 ---
 The person uses herdr 0.8.2. (stated 2026-11-11)
-Source for every line below: github.com/ogulcancelik/herdr tag `v0.8.2`, `docs/versions/0.8.2/.../cli-reference.mdx` and `src/`. Checked against the source, not against a running herdr. (verified 2026-11-11)
+Source for every line below: github.com/herdrdev/herdr (before: ogulcancelik/herdr) tag `v0.8.2`, `docs/versions/0.8.2/.../cli-reference.mdx` and `src/`. Checked against the source, not against a running herdr. (verified 2026-11-11)
 
 - `--session <name>` is removed from the arguments before any command runs (`src/session.rs` `configure_from_args`), so it works as a prefix on control commands such as `herdr --session orchard agent list`. (verified 2026-11-11, v0.8.2 source)
 - `herdr server` runs the headless server in the foreground. Stop it with `herdr server stop`. `herdr status server` shows its status. The 0.8.2 docs say nothing about SIGHUP, so start it with `setsid nohup ... &`. (verified 2026-11-11, v0.8.2 docs)
@@ -20,6 +20,13 @@ Source for every line below: github.com/ogulcancelik/herdr tag `v0.8.2`, `docs/v
 - After a server restart, processes are gone. herdr restores layout and cwd; the agent conversation returns only with native agent session restore. (verified 2026-11-11, v0.8.2 docs `session-state`)
 - `agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N]`. Without `--lines`, recent sources read 80 rows. (verified 2026-11-11, v0.8.2 docs)
 - A timeout or server error prints JSON on stderr and exits 1. Usage errors exit 2. A timeout does not prove that a prompt was not delivered. (verified 2026-11-11, v0.8.2 docs)
-- With no `--session`, the CLI uses `$HERDR_SESSION` (`src/session.rs`). So inside a herdr pane, a plain `herdr ...` command should reach the pane's own session. Not confirmed on a live herdr. (verified 2026-11-12, v0.8.2 source)
+- The CLI chooses the server in this order: `--session` on the command line, then `$HERDR_SOCKET_PATH`, then `$HERDR_SESSION`, then the default session (`src/session.rs` `configure_from_args`, `active_api_socket_path`). herdr sets `HERDR_SOCKET_PATH` in every pane (`src/integration/env.rs` `apply_pane_base_env`). So inside a pane, a plain `herdr ...` reaches the pane's own session, and an explicit `--session` with another name goes to another server with no error. Not confirmed on a live herdr. (verified 2026-11-14, v0.8.2 source)
 - Do not run bare `herdr`: it opens the TUI. (verified 2026-11-11, v0.8.2 docs)
 - Not in 0.8.2 docs: `herdr machine` (saved SSH profiles). The skills do not use it. (verified 2026-11-11, v0.8.2 docs)
+- `herdr --skill` prints the agent skill that is compiled into the binary (`src/main.rs`, `include_str!("../skills/herdr/SKILL.md")`). The skill covers only the session of the pane that the agent runs in: its first rule is to stop if `HERDR_ENV` is not `1`. (verified 2026-11-14, v0.8.2 source)
+- A command group with no subcommand prints its syntax: `herdr agent`, `herdr pane`, `herdr workspace`, `herdr tab`, `herdr session`. A subcommand that changes state runs with defaults if its arguments are left out (`herdr workspace create`). (verified 2026-11-14, v0.8.2 `skills/herdr/SKILL.md`)
+- `agent start` returns the error `agent_not_ready` at once if the agent is `blocked` during startup. The agent keeps its name, so `agent read` works. (verified 2026-11-14, v0.8.2 `src/cli/agent.rs` and skill)
+- `done` is `idle` that nobody has seen in a focused herdr UI. A CLI read does not mark it seen. An agent that starts idle in the background stays `idle`; one that finishes work in the background becomes `done`. A server with no UI attached therefore reports finished agents as `done`. (verified 2026-11-14, v0.8.2 `src/app/agent_view.rs`, `src/app/actions.rs` tests, and skill)
+- `agent prompt` checks for a stalled prompt (`agent_prompt_stalled`) only with `--wait`. `--wait` with no `--timeout` waits without limit. (verified 2026-11-14, v0.8.2 `src/cli/spec.rs`)
+- If `agent read` with more `--lines` shows no more of a reply, the agent draws on the terminal's alternate screen, and herdr has no scrollback for it. (verified 2026-11-14, v0.8.2 skill)
+- `agent get` and `agent list` include `workspace_id` and `tab_id`. Closed pane and tab IDs are not used again. (verified 2026-11-14, v0.8.2 `src/api/schema/agents.rs` and skill)

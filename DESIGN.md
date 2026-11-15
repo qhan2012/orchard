@@ -477,6 +477,11 @@ does not apply to workers.
   by name prefix at close. Deferred.
 - herdr version: the skills are checked against herdr 0.8.2 (source and docs
   at tag `v0.8.2`), the version in use. Not yet run against a live herdr.
+  `docs/herdr-skill.md` compares them with herdr's own agent skill and says
+  where orchard differs on purpose.
+- Workers and the herdr skill: a worker that has a herdr skill can start
+  helper agents in its own herdr workspace. No rule yet
+  (`docs/herdr-skill.md`, "Not decided here").
 - Nothing here is verified on a real machine yet. `docs/first-run.md` is the
   checklist that verifies it.
 

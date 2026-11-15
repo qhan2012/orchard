@@ -56,6 +56,20 @@ Rules for doing the task work (apple-to-apple comparisons, separate correctness 
 - **You run inside the person's herdr.** The person starts herdr themselves; its session is usually `default`. At the start of a session, if `HERDR_ENV=1`: run `herdr agent rename "$HERDR_PANE_ID" master` (no `--session`: inside a pane, herdr uses the pane's own session). Local workers start in this same session, next to you. The session also holds the person's own panes and agents: touch only agents that have a task file here. Never stop this server, and never send a prompt to `master`.
 - **At the start of a session**, list the tasks that have a `check:` value and ask the person which `/loop` to start again. `/loop` does not survive a restart.
 
+## The herdr skill
+
+herdr has its own agent skill (`herdr --skill` prints the one for the installed version). The skills in `.claude/skills/` are your procedure. The herdr skill is a reference for command syntax and agent states only. `docs/herdr-skill.md` has the comparison.
+
+If a herdr skill is loaded in your session, these rules here still win:
+
+- You control a target's herdr from an SSH shell, where `HERDR_ENV` is not set. The herdr skill says to stop there. Do not stop: this is the design.
+- A worker gets its own herdr workspace in directory `W`, not a sibling pane in your tab.
+- Send the task prompt without `--wait`. Then read `agent get`.
+- Never send keys, also where the herdr skill shows `agent send-keys`.
+- Touch only agents that have a task file here.
+
+When a command fails with a usage error (exit 2), or the herdr version is not 0.8.2, do not guess. Ask the binary on that machine: `herdr --help`, then the group with no subcommand (`herdr agent`, `herdr pane`, `herdr workspace`). Never do this with a subcommand that changes state (`herdr workspace create` runs with defaults), and never with bare `herdr`.
+
 ## After a check
 
 `/check` runs in a subagent and returns a short report for each task. It only looks and records. You act on the report:
