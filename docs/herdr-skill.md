@@ -78,7 +78,7 @@ When a command fails with a usage error (exit 2), or the herdr version is not 0.
 
 A worker runs in a herdr pane (`HERDR_ENV=1`). So it can reach every agent in its session, with or without a herdr skill. In the local session that includes the master and the person's own panes.
 
-- **Rule.** Every plan gets this constraint (`/publish` step 5): "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents."
+- **Rule.** Every plan gets this constraint (`/publish` step 5, "Standard constraints"): "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents."
 - **Why no helper agents.** A helper has no task file: `/check` does not count it and nothing restarts it. It runs without permission prompts like the worker. The worker's own subagents already give parallel work, and they end with the worker.
 - **Where the rule is.** In the plan, not in qhan2012/harness: the harness is also used without orchard.
 - **It is an instruction.** No hook enforces it (the guard runs in the master only).

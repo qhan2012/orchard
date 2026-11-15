@@ -44,10 +44,7 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    Write **what** and **when it is done**: goal, success criteria, verifier, scope boundary, constraints. Do not write how. The worker researches how as its first step (the harness rule "Research prerequisites first"), and it does not stop after that research: it goes on with the task.
    If you must learn something before you can write the plan (which target, what a fair criterion is), do not research it yourself. Send a subagent. It writes its findings and sources to `tasks/<task>/plan-notes.md` and returns a few lines. Then go on to the review screen without a stop.
    If the research before the task needs hours, publish a `research` task with a follow-up (see "Follow-up" below).
-   For `kind: experiment`, add these two lines to the plan Constraints:
-   - "Give every scheduler job a name that starts with `<task>-`."
-   - "Cancel your jobs before you write the summary."
-   If the target has a `datadir`, add: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
+   Add the standard constraints of step 5 to the plan Constraints now, so the person sees them at the review.
    The person reviews the plan in step 3.
 2. **Check the target.** `E true` must pass (for `research`: every target in `remotes`). If it fails, tell the person. Do not try to bypass it.
    A remote agent needs network access to its model API. If `memory/target-<target>.md` says the target has none, use `runner: local`.
@@ -86,7 +83,11 @@ This skill has all that you need. `DESIGN.md` gives the reasons; do not load it 
    With `runner: local` and `kind: experiment`, also make the remote work directory: `E 'test -e <remote W> && echo EXISTS || mkdir -p <remote W>'`. A `research` task makes nothing on a remote.
    Write the absolute path of `W` to `workspace:` (and `remote_dir:`) in the task file.
 5. **Write the plan.** Replace the `_TODO_` line under `## Project Scope` in the workspace `README.md` with the five plan items. With `runner: local` and `kind: experiment`, add the `### Remote` block. For `kind: research`, add the `### Remotes (read-only)` block. Both block texts are in `blocks.md`, next to this file.
-   For every task, also add this line to the plan Constraints: "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents." A worker runs in a herdr pane, so it can reach every agent in its session; locally that session also holds the master and the person's panes.
+   **Standard constraints.** The plan Constraints must have these lines. Add each one that is missing (a follow-up plan comes from a `## Proposed task` section and does not have them):
+   - Every task: "Use herdr only inside your own herdr workspace (`$HERDR_WORKSPACE_ID`). Do not start other agents in herdr; use your own subagents." A worker runs in a herdr pane, so it can reach every agent in its session; locally that session also holds the master and the person's panes.
+   - `kind: experiment`: "Give every scheduler job a name that starts with `<task>-`."
+   - `kind: experiment`: "Cancel your jobs before you write the summary."
+   - The target has a `datadir`: "Put large outputs (checkpoints, datasets, full logs) under `<datadir>/<task>/`."
    To write a remote file: `E 'cat > W/README.md' < local-copy`.
    **Send the input files.** Copy `tasks/<task>/` into the workspace `files/` directory (the harness has it for this): on a target, `tar -C tasks/<task> -cf - . | E 'tar -C W/files -xf -'`; locally, the same without `E`. The copy in `tasks/<task>/` stays as the master's record. Add one line to the plan Constraints: "Input files are in `files/`: <names>."
 6. **Seed memory.** If `memory/target-<target>.md` exists here (for `research`: one per target in `remotes`), copy it to the workspace `memory/` and add its line to the workspace `MEMORY.md`. The harness copy has no `MEMORY.md`: make it first, with the heading `# Memory index`.
