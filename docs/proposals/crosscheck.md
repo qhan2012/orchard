@@ -1,6 +1,6 @@
 # Proposal: crosscheck gates
 
-Status: **proposal for the person's review, 2026-11-15. Not agreed. Nothing here is built.**
+Status: **proposal for the person's review, 2026-11-15; two-level check and metrics added 2026-11-16. Not agreed. Nothing here is built.**
 After approval, this text becomes `DESIGN.md` section 5b and the changes in section 9 below.
 
 ## 1. Problem
@@ -31,6 +31,22 @@ A crosscheck must find these faults early, when they are cheap.
 5. **Cost follows risk.** Small runs have no gate. A waiting worker does
    useful work.
 
+## 2a. Two levels of check
+
+| | Light check: `/check` | Deep check: `/review` |
+|---|---|---|
+| When | On a cadence (`/loop 30m /check`), and when the person asks | On an event: a gate file waits, or a light check reports a problem. Also when the person asks ("deep check <task>"). Never on a clock |
+| Reads | herdr state, the worklog tail, the summary, gate and verdict file names, the metrics tail, the watch list | the plan, the gate file, and the evidence that it names: logs, configs, commits. It runs the commands that the gate names |
+| Output | status, latest progress, **latest metrics**, signals (section 6) | a verdict with evidence for each item (section 5) |
+| Cost | a few commands; a short report | one subagent that reads many files |
+
+Both run in a subagent, so neither fills the master's context.
+
+The light check finds; the deep check judges. The light check never
+decides if a number is right. It only compares it with the watch list that a
+deep check wrote (section 6). A deep check on a clock would read the same
+files again and again with nothing new to judge, so it runs only on an event.
+
 ## 3. The gates
 
 | Gate | When the worker writes it | File in the workspace | Blocks |
@@ -44,8 +60,8 @@ The `plan` gate holds two checks in one file: **understanding** and
 worker only minutes, and each stop costs up to one check interval
 (section 8). Open question 1 lets you split them.
 
-**Monitoring during a run** is not a gate. `/check` gets two more signals
-(section 6).
+**Monitoring during a run** is not a gate. The light check reports the
+metrics and the signals of section 6 on each run.
 
 A **small run** is a smoke test, or a run that the worker expects to cost
 less than `small_run` (default 0.5 resource-hours; open question 3). It
@@ -80,12 +96,28 @@ The master adds a `### Gates` block to the plan Constraints (text kept in
 1. The question that this experiment answers, and its success criterion.
 2. The variable under test, and what stays the same: data, hardware, config, seed.
 3. The baseline, and the file where its number comes from.
-4. The metric and how it is computed.
+4. The metric, how it is computed, and its name in `reports/metrics.log`.
 5. The correctness check, and whether it is a different run from the perf run.
 6. The cost: resource-hours and wall time. A sweep is one design; give the total.
 7. The first sign that the run works, and when to expect it.
 8. The conditions that make the worker stop the run.
 9. The exact command, the config path, and the code commit.
+10. The watch list: for each metric in `reports/metrics.log`, its normal
+    range, and by which step or time. The reviewer copies it into the verdict
+    (section 5) for the light check.
+
+**`reports/metrics.log`** (every `experiment` task, with or without gates).
+The worker appends one line each time a run reports a metric. It never
+edits old lines.
+
+```
+2026-11-15T14:20  lr-sweep  step=4000  val_loss=2.31  tok_per_s=5120
+2026-11-15T14:50  lr-sweep  step=6000  val_loss=nan   tok_per_s=5090
+```
+
+Fields are separated by two or more spaces: time, code name, then
+`name=value` pairs. A run with no metric yet writes nothing. The worker
+writes this file in addition to its own logs; the logs stay the evidence.
 
 **Summary (`result` gate).** One more rule: for each result number, the
 summary gives the file and the command that show it.
@@ -130,6 +162,10 @@ nothing on a target except the verdict file.
    - [not checked] commit — codebases/ not readable from here: <error>
    ## Required changes
    1. ...
+   ## Watch               # design gate with verdict pass only; the light check reads this section
+   - lr-sweep val_loss: finite, < 3.0 by step 2000
+   - lr-sweep tok_per_s: > 4500
+   - lr-sweep metrics.log: a new line every 30 min or less
    ```
 
    **Each item needs evidence**: a file and line, or a command and its
@@ -151,9 +187,22 @@ The reviewer reads. It does not run the experiment again.
 | `result` gate `pass` | Report `done` to the person, with the verdict. Publish a follow-up (`then:`) only now. |
 | `result` gate not `pass` | Do not report `done`. A failed `result` gate is one more stop condition for a follow-up. |
 
-## 6. How a gate is found, and monitoring during a run
+## 6. The light check: metrics, gates, and monitoring during a run
 
-`/check` already reads the workspace. It gets three more lines:
+`/check` already reads the workspace. It gets these additions. All are
+reads of small files; it runs no evaluation and opens no full log.
+
+- **Metrics, in every report.** `tail -n 40 W/reports/metrics.log`. For each
+  code name that has a line since the last check, report the newest value of
+  each metric, its step, and its age. Write the same to a new task-file
+  field, `metrics:` (one line), so the last values survive a restart.
+  If a task has a running experiment and `metrics.log` has no new line, say
+  so.
+- **Metric out of watch.** Compare each newest value with the `## Watch`
+  lines in the passed design verdicts. The comparison is plain: a range, a
+  bound, `finite`, or "a new line every N minutes". A value outside it gives
+  the line `watch: <code name> <metric>=<value>, expected <rule>`. The light
+  check does not explain it; the master runs `/review` (section 6a).
 
 - **Gate waiting**: a file in `reports/gates/` (or the summary) has no
   verdict file, or is newer than its verdict file. The report gets the line
@@ -166,6 +215,26 @@ The reviewer reads. It does not run the experiment again.
 - **No progress**: a passed design gives the time of the first sign of
   life. If the worklog has no new entry long after that time, the report
   says so.
+
+The report for each task grows from 8 to at most 12 lines:
+
+```
+lr-sweep-debug | running | was running | box1
+latest: iteration 4, sweep 3 of 5 running
+metrics: lr-sweep step=6000 val_loss=nan tok_per_s=5090 (10 min ago)
+watch: lr-sweep val_loss=nan, expected finite, < 3.0 by step 2000
+gate: design-lr-sweep-2 waiting
+```
+
+### 6a. What the master does with the light report
+
+| Line | Master does |
+|---|---|
+| `metrics:` | Gives it to the person as part of the report. Nothing else. |
+| `watch:` (out of watch) | Tells the person, and runs `/review <task>` on that experiment. The review checks the logs and gives `pass` (a false alarm; it can change the watch list), `revise` (the worker must fix and say so), or `escalate`. The master does not stop the run (ownership rule); the worker stops it if its own stop condition is true. |
+| no new metrics while a run is running | Same as "no progress": tell the person. |
+| `gate: ... waiting` | Runs `/review`. |
+| launch without a pass | Tells the person. |
 
 The gate state is in files in the workspace, so it survives a restart of the
 master, a restart of the worker after a kill, and `/fallback` (which must
@@ -203,11 +272,11 @@ can change them for one task at the one review screen.
 | File | Change |
 |---|---|
 | `.claude/skills/review/SKILL.md` (new) | the procedure of section 5, with the checklists |
-| `.claude/skills/publish/` | launch card `Gates:` line; step 5 adds the `### Gates` block from `blocks.md` |
-| `.claude/skills/check/SKILL.md` | the three lines of section 6 |
+| `.claude/skills/publish/` | launch card `Gates:` line; step 5 adds the `### Gates` block from `blocks.md`, and for every `experiment` the standard constraint "Append each metric to `reports/metrics.log` (format in the block)" |
+| `.claude/skills/check/SKILL.md` | the additions of section 6: metrics, watch, gate, launch, progress; report of up to 12 lines |
 | `.claude/skills/fallback/SKILL.md` | copy `reports/gates/` too |
-| `CLAUDE.md` "After a check" | act on `gate:` lines; `done` is reported only after the `result` gate |
-| `tasks/TEMPLATE.md` | field `gates:` |
+| `CLAUDE.md` "After a check" | the table of section 6a; `done` is reported only after the `result` gate |
+| `tasks/TEMPLATE.md` | fields `gates:` and `metrics:` |
 | `targets.example.yaml` | `ask_above`, `small_run` in `local` |
 | `DESIGN.md` | new section 5b; section 9 keeps "cross-model review" out of scope |
 | `README.md`, `docs/first-run.md` | seven skills; one first-run step for a gate |
@@ -227,6 +296,11 @@ first, then `/check`, then the rest.
 - **No rerun.** The reviewer confirms that the logs show the number. It does
   not confirm that a second run gives the same number.
 - **Delay.** Each gate waits for a check (section 8).
+- **Metrics are what the worker writes.** The light check trusts
+  `metrics.log`. A wrong line there is found only by a deep check, which
+  reads the logs: at the `result` gate, or after a `watch:` line.
+- **The watch list is only as good as the design.** A failure that no watch
+  line covers is seen only as "no progress" or at the `result` gate.
 - **The prompt after a verdict** is sent only to an idle worker. If herdr
   0.8.2 queues a prompt for a working agent is not verified, so the design
   does not need it.
@@ -244,3 +318,5 @@ first, then `/check`, then the rest.
 | 6 | Does a `research` task need the `plan` gate, or only `result`? | Both |
 | 7 | Can the reviewer write the verdict file into the workspace, or must the master do it? | The reviewer: the text stays out of the master's context |
 | 8 | Gates on by default for each new task, or only when the person asks? | On by default for `experiment` and `research`; shown on the launch card |
+| 9 | Metrics file: one `reports/metrics.log` per workspace, in the format of section 4? | Yes. Another format (CSV, JSON lines) is fine if it is one line per reading |
+| 10 | On a `watch:` line, does the master also run `/review` at once, or only tell the person? | Both: tell the person, and run `/review` |
